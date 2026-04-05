@@ -1,0 +1,51 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: buscamedicos_postgres
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-buscamedicos}
+      POSTGRES_USER: ${POSTGRES_USER:-buscamedicos}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-buscamedicos} -d ${POSTGRES_DB:-buscamedicos}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    profiles:
+      - required
+
+  backend_api:
+    build:
+      context: ./backend_api
+      dockerfile: Dockerfile
+    container_name: buscamedicos_backend
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-buscamedicos}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-buscamedicos}
+      SECRET_KEY: ${SECRET_KEY}
+      REDIS_URL: ${REDIS_URL:-}
+    ports:
+      - "${BACKEND_PORT:-8000}:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./backend_api:/app
+      - files_data:/app/files
+    profiles:
+      - required
+
+volumes:
+  postgres_data:
+  files_data:
+
+profiles:
+  required:
+    - required
+  optional:
+    - optional

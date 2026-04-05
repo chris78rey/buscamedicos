@@ -1,0 +1,1089 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BuscaMedicos - Demo Clínico</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Segoe UI', Roboto, sans-serif; background: #f0f2f5; }
+  
+  /* TOP BAR */
+  .topbar {
+    background: linear-gradient(135deg, #0077B6, #00B4D8);
+    color: white;
+    padding: 16px 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  }
+  .topbar h1 { font-size: 22px; font-weight: 600; }
+  .topbar .role-badge {
+    background: rgba(255,255,255,0.2);
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 13px;
+  }
+  
+  /* TABS */
+  .tabs {
+    display: flex;
+    background: white;
+    border-bottom: 2px solid #e0e0e0;
+    overflow-x: auto;
+  }
+  .tab {
+    padding: 14px 22px;
+    cursor: pointer;
+    border-bottom: 3px solid transparent;
+    color: #666;
+    font-weight: 500;
+    white-space: nowrap;
+    transition: all 0.2s;
+  }
+  .tab:hover { background: #f8f9fa; color: #0077B6; }
+  .tab.active { border-bottom-color: #0077B6; color: #0077B6; background: #eaf4fb; }
+  
+  /* SCREEN CONTAINER */
+  .screen { display: none; padding: 24px; max-width: 900px; margin: 0 auto; animation: fadeIn 0.3s; }
+  .screen.active { display: block; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+  
+  /* CARDS */
+  .card {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    padding: 20px;
+    margin-bottom: 16px;
+  }
+  .card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 14px;
+  }
+  .card-title { font-size: 16px; font-weight: 700; color: #222; }
+  .status-badge {
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
+  }
+  .status-created { background: #FFF3CD; color: #856404; }
+  .status-ready { background: #D4EDDA; color: #155724; }
+  .status-in-progress { background: #CCE5FF; color: #004085; }
+  .status-completed { background: #D4EDDA; color: #155724; }
+  .status-draft { background: #F8F9FA; color: #6c757d; }
+  .status-issued { background: #D4EDDA; color: #155724; }
+  
+  /* FORM FIELDS */
+  .form-group { margin-bottom: 16px; }
+  .form-label { display: block; font-size: 13px; font-weight: 600; color: #444; margin-bottom: 6px; }
+  .form-input, .form-textarea, .form-select {
+    width: 100%;
+    padding: 10px 14px;
+    border: 2px solid #e0e0e0;
+    border-radius: 8px;
+    font-size: 14px;
+    transition: border-color 0.2s;
+    background: white;
+  }
+  .form-input:focus, .form-textarea:focus, .form-select:focus {
+    outline: none;
+    border-color: #0077B6;
+  }
+  .form-textarea { resize: vertical; min-height: 80px; }
+  
+  /* BUTTONS */
+  .btn {
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    border: none;
+    transition: all 0.2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .btn-primary { background: #0077B6; color: white; }
+  .btn-primary:hover { background: #005f8a; transform: translateY(-1px); }
+  .btn-success { background: #28a745; color: white; }
+  .btn-success:hover { background: #1e7e34; }
+  .btn-danger { background: #dc3545; color: white; }
+  .btn-danger:hover { background: #c82333; }
+  .btn-secondary { background: #6c757d; color: white; }
+  .btn-secondary:hover { background: #545b62; }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+  
+  /* BUTTONS ROW */
+  .btn-row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px; }
+  
+  /* INFO ROW */
+  .info-row { display: flex; gap: 16px; margin: 8px 0; font-size: 14px; color: #555; }
+  .info-row span { display: flex; align-items: center; gap: 5px; }
+  
+  /* SWITCH */
+  .switch-row { display: flex; align-items: center; justify-content: space-between; padding: 8px 0; }
+  .switch-label { font-size: 14px; font-weight: 500; }
+  .switch {
+    width: 48px; height: 26px;
+    background: #ccc;
+    border-radius: 13px;
+    position: relative;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  .switch.on { background: #0077B6; }
+  .switch::after {
+    content: '';
+    width: 22px; height: 22px;
+    background: white;
+    border-radius: 50%;
+    position: absolute;
+    top: 2px; left: 2px;
+    transition: transform 0.2s;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+  }
+  .switch.on::after { transform: translateX(22px); }
+  
+  /* MEDICATION LIST */
+  .med-item {
+    background: #f8f9fa;
+    border-left: 4px solid #0077B6;
+    padding: 12px 16px;
+    border-radius: 0 8px 8px 0;
+    margin-bottom: 10px;
+  }
+  .med-item h4 { font-size: 15px; color: #222; margin-bottom: 4px; }
+  .med-item p { font-size: 13px; color: #666; }
+  
+  /* PRESCRIPTION ITEM FORM */
+  .med-form {
+    background: #f0f7ff;
+    border: 2px dashed #0077B6;
+    border-radius: 10px;
+    padding: 14px;
+    margin-bottom: 12px;
+  }
+  .med-form h4 { font-size: 14px; color: #0077B6; margin-bottom: 10px; }
+  
+  /* DIVIDER */
+  .divider { border: none; border-top: 1px solid #e0e0e0; margin: 16px 0; }
+  
+  /* SWITCH PANEL */
+  .switch-panel {
+    background: linear-gradient(135deg, #eaf4fb, #f0f7ff);
+    border: 2px solid #0077B6;
+    border-radius: 12px;
+    padding: 16px;
+    margin-top: 12px;
+  }
+  
+  /* TELECONSULT */
+  .teleconsult-url {
+    background: #e8f5e9;
+    border: 2px solid #4CAF50;
+    border-radius: 8px;
+    padding: 12px;
+    font-size: 14px;
+    color: #2e7d32;
+    word-break: break-all;
+    margin-top: 8px;
+  }
+  .teleconsult-url a { color: #1b5e20; }
+  
+  /* AUDIT TABLE */
+  .audit-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .audit-table th { background: #f8f9fa; padding: 10px 12px; text-align: left; border-bottom: 2px solid #e0e0e0; color: #555; font-weight: 600; }
+  .audit-table td { padding: 9px 12px; border-bottom: 1px solid #f0f0f0; color: #333; }
+  .audit-table tr:hover td { background: #f8f9fa; }
+  .audit-action { font-weight: 600; }
+  .action-create { color: #28a745; }
+  .action-read { color: #0077B6; }
+  .action-update { color: #fd7e14; }
+  .action-delete { color: #dc3545; }
+  
+  /* PROFILE CHIP */
+  .profile-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: #e3f2fd;
+    padding: 5px 12px;
+    border-radius: 16px;
+    font-size: 12px;
+    color: #0277B6;
+  }
+  
+  /* EMPTY STATE */
+  .empty-state {
+    text-align: center;
+    padding: 40px;
+    color: #999;
+  }
+  .empty-state .emoji { font-size: 48px; margin-bottom: 12px; }
+  
+  /* TOAST */
+  .toast {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    background: #333;
+    color: white;
+    padding: 14px 22px;
+    border-radius: 10px;
+    font-size: 14px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+    z-index: 9999;
+    animation: slideUp 0.3s;
+  }
+  .toast.success { background: #28a745; }
+  .toast.error { background: #dc3545; }
+  @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+  
+  /* NAVIGATOR */
+  .navigator {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+  .nav-card {
+    background: white;
+    border-radius: 12px;
+    padding: 16px;
+    cursor: pointer;
+    border: 2px solid #e0e0e0;
+    transition: all 0.2s;
+    text-align: center;
+  }
+  .nav-card:hover { border-color: #0077B6; transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+  .nav-card .icon { font-size: 28px; margin-bottom: 6px; }
+  .nav-card .label { font-size: 13px; font-weight: 600; color: #333; }
+  
+  /* WYSIWYG */
+  .wysiwyg-toolbar {
+    display: flex;
+    gap: 4px;
+    background: #f8f9fa;
+    border: 2px solid #e0e0e0;
+    border-bottom: none;
+    border-radius: 8px 8px 0 0;
+    padding: 6px;
+  }
+  .wysiwyg-toolbar button {
+    padding: 5px 10px;
+    border: 1px solid #ddd;
+    background: white;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 13px;
+  }
+  .wysiwyg-toolbar button:hover { background: #e9ecef; }
+  .wysiwyg-editor {
+    border: 2px solid #e0e0e0;
+    border-radius: 0 0 8px 8px;
+    min-height: 120px;
+    padding: 12px;
+    font-size: 14px;
+  }
+  
+  /* STEPS */
+  .steps { display: flex; align-items: center; gap: 8px; margin-bottom: 20px; }
+  .step {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: #999;
+  }
+  .step.done { color: #28a745; }
+  .step.current { color: #0077B6; font-weight: 600; }
+  .step-num {
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 700;
+    border: 2px solid currentColor;
+  }
+  .step.done .step-num { background: #28a745; color: white; border-color: #28a745; }
+  .step.current .step-num { background: #0077B6; color: white; border-color: #0077B6; }
+  .step-line { flex: 1; height: 2px; background: #e0e0e0; border-radius: 1px; }
+  
+  /* DEMO NOTE */
+  .demo-note {
+    background: #fff3cd;
+    border: 1px solid #ffc107;
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 13px;
+    color: #856404;
+    margin-bottom: 16px;
+  }
+  
+  /* SCHEDULE DISPLAY */
+  .schedule-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    background: #f0f7ff;
+    padding: 14px;
+    border-radius: 10px;
+    margin-top: 10px;
+  }
+  .schedule-item { font-size: 13px; color: #333; }
+  .schedule-item strong { color: #0077B6; }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <h1>🏥 BuscaMedicos</h1>
+  <div style="display:flex;align-items:center;gap:12px">
+    <span style="font-size:13px">Dr. María García</span>
+    <span class="role-badge">Profesional</span>
+    <select id="roleSwitcher" onchange="switchRole(this.value)" style="padding:4px 8px;border-radius:6px;border:1px solid rgba(255,255,255,0.3);background:rgba(255,255,255,0.15);color:white;font-size:12px">
+      <option value="professional">👨‍⚕️ Profesional</option>
+      <option value="patient">🧑 Paciente</option>
+      <option value="admin">🔧 Admin</option>
+    </select>
+  </div>
+</div>
+
+<!-- PROFESSIONAL SCREENS -->
+<div id="prof-screens">
+
+  <!-- PROF: HOME -->
+  <div id="prof-home" class="screen active">
+    <div class="demo-note">⚠️ Demo interactivo - datos simulados sin conexión real</div>
+    <h2 style="margin-bottom:16px;font-size:20px;color:#333">Panel de Teleconsulta</h2>
+    
+    <div class="navigator">
+      <div class="nav-card" onclick="showScreen('prof-teleconsult-create')">
+        <div class="icon">📹</div>
+        <div class="label">Crear Sesión</div>
+      </div>
+      <div class="nav-card" onclick="showScreen('prof-manage')">
+        <div class="icon">🕐</div>
+        <div class="label">Gestionar Sesión</div>
+      </div>
+      <div class="nav-card" onclick="showScreen('prof-clinical-note')">
+        <div class="icon">📋</div>
+        <div class="label">Nota Clínica</div>
+      </div>
+      <div class="nav-card" onclick="showScreen('prof-prescription')">
+        <div class="icon">💊</div>
+        <div class="label">Receta</div>
+      </div>
+      <div class="nav-card" onclick="showScreen('prof-care')">
+        <div class="icon">📝</div>
+        <div class="label">Indicaciones</div>
+      </div>
+      <div class="nav-card" onclick="showScreen('prof-audit')">
+        <div class="icon">🔍</div>
+        <div class="label">Auditoría</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">📅 Próximas Teleconsultas</span>
+      </div>
+      <div class="med-item">
+        <h4>Carlos Mendoza</h4>
+        <p>📅 15 Ene 2026 10:00 - 11:00 | 📞 Teleconsulta</p>
+        <div class="btn-row" style="margin-top:8px">
+          <button class="btn btn-primary" onclick="showScreen('prof-manage')">Gestionar</button>
+          <button class="btn btn-secondary" onclick="showScreen('prof-clinical-note')">Nota Clínica</button>
+        </div>
+      </div>
+      <div class="med-item">
+        <h4>Ana Lucía Pérez</h4>
+        <p>📅 15 Ene 2026 11:30 - 12:30 | 📞 Teleconsulta</p>
+        <div class="btn-row" style="margin-top:8px">
+          <button class="btn btn-primary" onclick="showScreen('prof-teleconsult-create')">Crear Sesión</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PROF: CREATE TELECONSULT -->
+  <div id="prof-teleconsult-create" class="screen">
+    <div class="demo-note">⚠️ Demo - POST /api/v1/professionals/me/appointments/{id}/teleconsultation</div>
+    <h2 style="margin-bottom:16px;font-size:20px">📹 Crear Sesión de Teleconsulta</h2>
+    
+    <div class="steps">
+      <div class="step current"><div class="step-num">1</div> Crear</div>
+      <div class="step-line"></div>
+      <div class="step"><div class="step-num">2</div> Iniciar</div>
+      <div class="step-line"></div>
+      <div class="step"><div class="step-num">3</div> Atender</div>
+      <div class="step-line"></div>
+      <div class="step"><div class="step-num">4</div> Cerrar</div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">Datos de la Videollamada</span>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Proveedor *</label>
+        <select class="form-select" id="tc-provider">
+          <option value="jitsi">Jitsi Meet (Recomendado)</option>
+          <option value="zoom">Zoom</option>
+          <option value="meet">Google Meet</option>
+          <option value="external">Enlace Externo</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">URL de la Sala *</label>
+        <input class="form-input" id="tc-url" value="https://meet.jit.si/buscamedicos-drgarcia-abc123" placeholder="https://...">
+      </div>
+      <div class="form-group">
+        <label class="form-label">URL del Anfitrión (opcional)</label>
+        <input class="form-input" id="tc-host" value="https://meet.jit.si/buscamedicos-drgarcia-abc123? Auditorium=true">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Código de Acceso (opcional)</label>
+        <input class="form-input" id="tc-code" value=" BuscaMedicos2026">
+      </div>
+      <div class="info-row">
+        <span><strong>📅:</strong> 15 Ene 2026 10:00 - 11:00</span>
+        <span><strong>💰:</strong> Paid - $45.00 USD</span>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-primary" onclick="createTeleconsult()">✓ Crear Sesión</button>
+        <button class="btn btn-secondary" onclick="showScreen('prof-home')">← Volver</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- PROF: MANAGE TELECONSULT -->
+  <div id="prof-manage" class="screen">
+    <div class="demo-note">⚠️ Demo - Control de inicio/cierre de teleconsulta</div>
+    <h2 style="margin-bottom:16px;font-size:20px">🕐 Gestionar Sesión</h2>
+    
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">Sesión Activa</span>
+        <span class="status-badge status-ready" id="tc-status-badge">Lista</span>
+      </div>
+      <div class="info-row">
+        <span><strong>ID:</strong> sess_abc123def</span>
+        <span><strong>Proveedor:</strong> Jitsi Meet</span>
+      </div>
+      <div class="info-row">
+        <span><strong>Inicio:</strong> 15 Ene 10:00</span>
+        <span><strong>Fin:</strong> 15 Ene 11:00</span>
+      </div>
+      <div class="teleconsult-url">
+        🔗 <a href="#" onclick="return false">https://meet.jit.si/buscamedicos-drgarcia-abc123</a>
+        <br><small>Código: BuscaMedicos2026</small>
+      </div>
+      <hr class="divider">
+      <p style="font-size:14px;color:#555;margin-bottom:10px">🔒 Solo el profesional puede iniciar/finalizar la sesión. Paciente puede unirse cuando esté lista.</p>
+      <div class="btn-row">
+        <button class="btn btn-success" id="btn-start" onclick="startTeleconsult()">▶ Iniciar Sesión</button>
+        <button class="btn btn-danger" id="btn-end" onclick="endTeleconsult()" disabled>⏹ Finalizar Sesión</button>
+      </div>
+      <div id="session-timer" style="margin-top:12px;font-size:24px;font-weight:700;color:#0077B6;text-align:center;display:none">
+        🕐 <span id="timer-display">00:00</span> en curso
+      </div>
+    </div>
+
+    <button class="btn btn-secondary" onclick="showScreen('prof-home')">← Volver al Panel</button>
+  </div>
+
+  <!-- PROF: CLINICAL NOTE -->
+  <div id="prof-clinical-note" class="screen">
+    <div class="demo-note">⚠️ Demo - GET/PUT /api/v1/professionals/me/appointments/{id}/clinical-note</div>
+    <h2 style="margin-bottom:16px;font-size:20px">📋 Nota Clínica Simple</h2>
+    
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">Cita: Carlos Mendoza - 15 Ene 2026</span>
+        <span class="status-badge status-draft" id="note-status-badge">Borrador</span>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Motivo de Consulta</label>
+        <textarea class="form-textarea" id="note-reason" placeholder="Descripción del motivo de consulta...">Paciente refiere dolor de cabeza intermitente desde hace 3 días, acompañado de fotofobia. Sin antecedentes relevantes.</textarea>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Resumen Subjetivo</label>
+        <textarea class="form-textarea" id="note-subjective" placeholder="Información proporcionada por el paciente...">Manifiesta que el dolor es de intensidad moderada, localizado en región frontal, tipo pulsátil. Mejora parcialmente con paracetamol. Niega náuseas o vómitos. Ciclo de sueño alterado por estrés laboral.</textarea>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Resumen Objetivo</label>
+        <textarea class="form-textarea" id="note-objective" placeholder="Hallazgos del examen físico...">PA: 120/80 mmHg. FC: 72 lpm. Temp: 36.5°C. Paciente alerta, orientada, sin signs meníngeos. Fondo de ojo normal. Examen neurológico sin focalización.</textarea>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Evaluación / Diagnóstico</label>
+        <textarea class="form-textarea" id="note-assessment" placeholder="Evaluación clínica...">Cefalea tensional probable. Se descarta migraña por criterios clínicos. Se solicita precaución con pantallas y se prescribe tratamiento sintomático.</textarea>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Plan de Manejo</label>
+        <textarea class="form-textarea" id="note-plan" placeholder="Plan de tratamiento...">1. Ibuprofen 400mg cada 8h por 5 días con alimentos
+2. Paracetamol 500mg si dolor persiste
+3. Hidratación adecuada (2L/día)
+4. Evitar pantallas por más de 2h continuas
+5. Seguimiento en 7 días si síntomas persisten</textarea>
+      </div>
+
+      <div class="switch-panel">
+        <div class="switch-row">
+          <span class="switch-label">👁️ Visible para el Paciente</span>
+          <div class="switch on" id="note-visible" onclick="toggleSwitch(this)"></div>
+        </div>
+        <p style="font-size:12px;color:#666;margin-top:4px">Si está desactivado, el paciente no podrá ver esta nota</p>
+      </div>
+
+      <div class="form-group" style="margin-top:12px">
+        <label class="form-label">Nota Privada del Profesional (no visible para paciente)</label>
+        <textarea class="form-textarea" id="note-private" style="background:#fff3cd" placeholder="Notas privadas para seguimiento...">Derivación a neurología si cefalea persiste más de 2 semanas o empeora. Considerar estudios de imagen.</textarea>
+      </div>
+
+      <div class="info-row">
+        <span><strong>📌:</strong> Cada guardado crea una nueva versión</span>
+        <span><strong>🔢:</strong> Versión actual: <span id="note-version">3</span></span>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn btn-primary" onclick="saveClinicalNote()">💾 Guardar Nota</button>
+        <button class="btn btn-success" onclick="signClinicalNote()">✍️ Firma Simple</button>
+        <button class="btn btn-secondary" onclick="showScreen('prof-home')">← Volver</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- PROF: PRESCRIPTION -->
+  <div id="prof-prescription" class="screen">
+    <div class="demo-note">⚠️ Demo - POST /api/v1/professionals/me/appointments/{id}/prescription</div>
+    <h2 style="margin-bottom:16px;font-size:20px">💊 Receta Digital</h2>
+    
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">Nueva Receta - Carlos Mendoza</span>
+        <span class="status-badge status-draft" id="rx-status-badge">Borrador</span>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Notas Generales</label>
+        <textarea class="form-textarea" id="rx-notes" placeholder="Indicaciones generales...">Tomar medicamentos con alimentos. Mantener hidratación adecuada. Evitar consumo de alcohol durante el tratamiento.</textarea>
+      </div>
+
+      <hr class="divider">
+      <h3 style="font-size:15px;margin-bottom:12px">💉 Medicamentos</h3>
+
+      <div class="med-form">
+        <h4>Medicamento 1</h4>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <div class="form-group" style="margin:0">
+            <label class="form-label">Nombre *</label>
+            <input class="form-input" id="rx-name-1" value="Ibuprofen">
+          </div>
+          <div class="form-group" style="margin:0">
+            <label class="form-label">Presentación</label>
+            <input class="form-input" id="rx-present-1" value="Tableta 400mg">
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:10px">
+          <div class="form-group" style="margin:0">
+            <label class="form-label">Dosis *</label>
+            <input class="form-input" id="rx-dose-1" value="400mg">
+          </div>
+          <div class="form-group" style="margin:0">
+            <label class="form-label">Frecuencia *</label>
+            <input class="form-input" id="rx-freq-1" value="Cada 8 horas">
+          </div>
+          <div class="form-group" style="margin:0">
+            <label class="form-label">Duración *</label>
+            <input class="form-input" id="rx-dur-1" value="5 días">
+          </div>
+        </div>
+        <div class="form-group" style="margin:10px 0 0">
+          <label class="form-label">Vía de Administración</label>
+          <input class="form-input" id="rx-route-1" value="Oral">
+        </div>
+        <div class="form-group" style="margin:10px 0 0">
+          <label class="form-label">Instrucciones</label>
+          <input class="form-input" id="rx-inst-1" value="Tomar con las comidas para evitar molestas gástricas">
+        </div>
+      </div>
+
+      <div class="med-form">
+        <h4>Medicamento 2</h4>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <div class="form-group" style="margin:0">
+            <label class="form-label">Nombre *</label>
+            <input class="form-input" id="rx-name-2" value="Paracetamol">
+          </div>
+          <div class="form-group" style="margin:0">
+            <label class="form-label">Presentación</label>
+            <input class="form-input" id="rx-present-2" value="Tableta 500mg">
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:10px">
+          <div class="form-group" style="margin:0">
+            <label class="form-label">Dosis *</label>
+            <input class="form-input" id="rx-dose-2" value="500mg">
+          </div>
+          <div class="form-group" style="margin:0">
+            <label class="form-label">Frecuencia *</label>
+            <input class="form-input" id="rx-freq-2" value="Cada 6 horas si dolor">
+          </div>
+          <div class="form-group" style="margin:0">
+            <label class="form-label">Duración *</label>
+            <input class="form-input" id="rx-dur-2" value="7 días">
+          </div>
+        </div>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn btn-primary" onclick="createPrescription()">💾 Crear Receta (Draft)</button>
+        <button class="btn btn-success" id="btn-issue-rx" onclick="issuePrescription()">✅ Emitir Receta</button>
+        <button class="btn btn-danger" id="btn-revoke-rx" onclick="revokePrescription()" disabled>🚫 Revocar</button>
+        <button class="btn btn-secondary" onclick="showScreen('prof-home')">← Volver</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- PROF: CARE INSTRUCTIONS -->
+  <div id="prof-care" class="screen">
+    <div class="demo-note">⚠️ Demo - PUT /api/v1/professionals/me/appointments/{id}/care-instructions</div>
+    <h2 style="margin-bottom:16px;font-size:20px">📝 Indicaciones de Cuidado</h2>
+    
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">Indicaciones - Carlos Mendoza</span>
+        <span class="status-badge status-issued" id="care-status-badge">Emitida</span>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Contenido de las Indicaciones *</label>
+        <div class="wysiwyg-toolbar">
+          <button>B</button><button>I</button><button>U</button>
+          <button>•</button><button>1.</button>
+        </div>
+        <div class="wysiwyg-editor" contenteditable="true" id="care-content">
+          <b>Instrucciones post-consulta:</b><br><br>
+          1. Reposo relativo por 48 horas<br>
+          2. Evitar actividad física intensa<br>
+          3. Mantener ambiente tranquilo y con poca luz<br>
+          4. No consumir alcohol durante el tratamiento<br>
+          5. Rehidratarte adecuadamente (mínimo 2 litros de agua al día)<br>
+          6. Evitar ayuno prolongado - comer en horarios regulares<br>
+          7. No automedicarse con antibióticos<br>
+        </div>
+      </div>
+
+      <div class="switch-panel">
+        <div class="switch-row">
+          <span class="switch-label">📅 Seguimiento Recomendado</span>
+          <div class="switch on" id="care-followup" onclick="toggleSwitch(this)"></div>
+        </div>
+        <div class="form-group" style="margin-top:10px">
+          <label class="form-label">Nota de Seguimiento</label>
+          <input class="form-input" id="care-followup-note" value="Retornar en 7 días si los síntomas persisten o empeoran. Contactar antes si presenta efectos adversos.">
+        </div>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn btn-primary" onclick="saveCareInstructions()">💾 Guardar</button>
+        <button class="btn btn-success" onclick="issueCareInstructions()">✅ Emitir Indicaciones</button>
+        <button class="btn btn-secondary" onclick="showScreen('prof-home')">← Volver</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- PROF: AUDIT -->
+  <div id="prof-audit" class="screen">
+    <div class="demo-note">⚠️ Demo - Los clínicos siempre auditan todas las operaciones</div>
+    <h2 style="margin-bottom:16px;font-size:20px">🔍 Auditoría de Acceso Clínico</h2>
+    
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">clinical_access_audit</span>
+        <span class="profile-chip">🔒 SoloAdmin</span>
+      </div>
+      <table class="audit-table">
+        <thead>
+          <tr>
+            <th>Fecha/Hora</th>
+            <th>Recurso</th>
+            <th>ID Recurso</th>
+            <th>Actor</th>
+            <th>Rol</th>
+            <th>Acción</th>
+          </tr>
+        </thead>
+        <tbody id="audit-tbody">
+          <tr>
+            <td>15:32:10</td>
+            <td>clinical_note</td>
+            <td><small>note_xyz789</small></td>
+            <td>Dr. María García</td>
+            <td>professional</td>
+            <td><span class="audit-action action-update">update</span></td>
+          </tr>
+          <tr>
+            <td>15:28:05</td>
+            <td>teleconsultation</td>
+            <td><small>sess_abc123</small></td>
+            <td>Dr. María García</td>
+            <td>professional</td>
+            <td><span class="audit-action action-create">start_session</span></td>
+          </tr>
+          <tr>
+            <td>15:25:00</td>
+            <td>prescription</td>
+            <td><small>rx_def456</small></td>
+            <td>Dr. María García</td>
+            <td>professional</td>
+            <td><span class="audit-action action-create">create</span></td>
+          </tr>
+          <tr>
+            <td>15:20:18</td>
+            <td>clinical_note</td>
+            <td><small>note_xyz789</small></td>
+            <td>Dr. María García</td>
+            <td>professional</td>
+            <td><span class="audit-action action-read">read</span></td>
+          </tr>
+          <tr>
+            <td>15:15:42</td>
+            <td>teleconsultation</td>
+            <td><small>sess_abc123</small></td>
+            <td>Carlos Mendoza</td>
+            <td>patient</td>
+            <td><span class="audit-action action-read">join_session</span></td>
+          </tr>
+          <tr>
+            <td>15:10:00</td>
+            <td>care_instruction</td>
+            <td><small>care_ghi111</small></td>
+            <td>Dr. María García</td>
+            <td>professional</td>
+            <td><span class="audit-action action-create">create</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- PATIENT SCREENS -->
+<div id="patient-screens" style="display:none">
+  <div id="patient-home" class="screen active">
+    <div class="demo-note">⚠️ Vista del Paciente - Solo ve lo que el profesional autorizó</div>
+    <h2 style="margin-bottom:16px;font-size:20px">📱 Mi Teleconsulta</h2>
+
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">📅 Dr. María García - 15 Ene 2026</span>
+        <span class="status-badge status-in-progress">En Curso</span>
+      </div>
+      <div class="info-row">
+        <span>🕐 10:00 - 11:00</span>
+        <span>📞 Teleconsulta</span>
+      </div>
+      <div class="teleconsult-url">
+        🔗 Tu enlace de videollamada:<br>
+        <a href="#" onclick="return false">https://meet.jit.si/buscamedicos-drgarcia-abc123</a>
+        <br><small>Código: BuscaMedicos2026</small>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-success" onclick="joinTeleconsult()">✅ Unirse a la Videollamada</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">📋 Contenido Clínico Disponible</span>
+      </div>
+
+      <div class="med-item">
+        <h4>📝 Nota Clínica</h4>
+        <p style="color:#28a745;font-size:13px">✓ Visible para ti</p>
+        <p><strong>Motivo:</strong> Dolor de cabeza intermitente</p>
+        <p><strong>Evaluación:</strong> Cefalea tensional probable</p>
+        <p><strong>Plan:</strong> Tratamiento con Ibuprofen + Paracetamol</p>
+      </div>
+
+      <div class="med-item">
+        <h4>💊 Receta Emitida</h4>
+        <p style="color:#28a745;font-size:13px">✓ Activa</p>
+        <p><strong>Medicamentos:</strong> Ibuprofen 400mg + Paracetamol 500mg</p>
+        <p><strong>Emitida:</strong> 15 Ene 2026 15:30</p>
+      </div>
+
+      <div class="med-item">
+        <h4>📝 Indicaciones</h4>
+        <p style="color:#28a745;font-size:13px">✓ Disponibles</p>
+        <p>Reposo relativo 48h, hidratación, seguimiento en 7 días</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ADMIN SCREENS -->
+<div id="admin-screens" style="display:none">
+  <div id="admin-home" class="screen active">
+    <div class="demo-note">⚠️ Admin - Solo ve metadatos operativos, NUNCA contenido clínico</div>
+    <h2 style="margin-bottom:16px;font-size:20px">🔧 Panel de Administración Clínica</h2>
+
+    <div class="navigator">
+      <div class="nav-card" onclick="showScreen('admin-teleconsult-meta')">
+        <div class="icon">📹</div>
+        <div class="label">Meta Teleconsulta</div>
+      </div>
+      <div class="nav-card" onclick="showScreen('admin-audit')">
+        <div class="icon">🔍</div>
+        <div class="label">Auditoría Acceso</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">🚫 Restricción de Acceso Clínico</span>
+      </div>
+      <div style="background:#fff3cd;border-radius:8px;padding:16px;font-size:14px">
+        <p><strong>Por defecto, el admin NO puede ver:</strong></p>
+        <ul style="margin:8px 0 0 20px;color:#856404">
+          <li>Notas clínicas</li>
+          <li>Recetas e indicaciones</li>
+          <li>Contenido clínico en general</li>
+        </ul>
+        <p style="margin-top:10px"><strong>Solo puede ver:</strong></p>
+        <ul style="margin:8px 0 0 20px;color:#155724">
+          <li>Metadatos operativos de teleconsulta</li>
+          <li>Registros de auditoría de acceso clínico</li>
+          <li>IDs y estados (nunca contenido)</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div id="admin-teleconsult-meta" class="screen">
+    <h2 style="margin-bottom:16px;font-size:20px">📹 Metadatos de Teleconsulta</h2>
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">GET /api/v1/admin/appointments/{id}/teleconsultation-meta</span>
+      </div>
+      <p style="font-size:13px;color:#666;margin-bottom:12px">Este endpoint SOLO retorna metadatos operativos. Admin nunca ve contenido clínico.</p>
+      <div style="background:#f0f7ff;padding:14px;border-radius:8px;font-family:monospace;font-size:13px">
+        {<br>
+        &nbsp;&nbsp;"id": "sess_abc123def",<br>
+        &nbsp;&nbsp;"appointment_id": "appt_xyz789",<br>
+        &nbsp;&nbsp;"provider_code": "jitsi",<br>
+        &nbsp;&nbsp;"status": "in_progress",<br>
+        &nbsp;&nbsp;"scheduled_start": "2026-01-15T10:00:00Z",<br>
+        &nbsp;&nbsp;"scheduled_end": "2026-01-15T11:00:00Z",<br>
+        &nbsp;&nbsp;"actual_start": "2026-01-15T10:05:00Z",<br>
+        &nbsp;&nbsp;"actual_end": null,<br>
+        &nbsp;&nbsp;"has_active_session": true<br>
+        }
+      </div>
+    </div>
+    <button class="btn btn-secondary" onclick="showScreen('admin-home')">← Volver</button>
+  </div>
+
+  <div id="admin-audit" class="screen">
+    <h2 style="margin-bottom:16px;font-size:20px">🔍 Auditoría de Acceso Clínico</h2>
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">GET /api/v1/admin/clinical-access-audit</span>
+      </div>
+      <p style="font-size:13px;color:#666;margin-bottom:12px">Admin puede ver QUIÉN accedió QUÉ recurso clínico, pero nunca el contenido.</p>
+      <table class="audit-table">
+        <thead>
+          <tr>
+            <th>Fecha</th>
+            <th>Tipo Recurso</th>
+            <th>ID Recurso</th>
+            <th>Actor</th>
+            <th>Rol</th>
+            <th>Acción</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>15:32:10</td>
+            <td>clinical_note</td>
+            <td>note_xyz789</td>
+            <td>usr_drgarcia</td>
+            <td>professional</td>
+            <td><span class="audit-action action-update">update</span></td>
+          </tr>
+          <tr>
+            <td>15:28:05</td>
+            <td>teleconsultation</td>
+            <td>sess_abc123</td>
+            <td>usr_drgarcia</td>
+            <td>professional</td>
+            <td><span class="audit-action action-create">start_session</span></td>
+          </tr>
+          <tr>
+            <td>15:15:42</td>
+            <td>teleconsultation</td>
+            <td>sess_abc123</td>
+            <td>usr_carlosmendoza</td>
+            <td>patient</td>
+            <td><span class="audit-action action-read">join_session</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <button class="btn btn-secondary" onclick="showScreen('admin-home')">← Volver</button>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div id="toast" class="toast" style="display:none"></div>
+
+<script>
+// Navigation
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  const target = document.getElementById(id);
+  if (target) {
+    target.classList.add('active');
+    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+}
+
+function switchRole(role) {
+  document.getElementById('prof-screens').style.display = role === 'professional' ? 'block' : 'none';
+  document.getElementById('patient-screens').style.display = role === 'patient' ? 'block' : 'none';
+  document.getElementById('admin-screens').style.display = role === 'admin' ? 'block' : 'none';
+  
+  if (role === 'professional') showScreen('prof-home');
+  else if (role === 'patient') showScreen('patient-home');
+  else if (role === 'admin') showScreen('admin-home');
+}
+
+function toggleSwitch(el) {
+  el.classList.toggle('on');
+}
+
+function showToast(msg, type = '') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast' + (type ? ' ' + type : '');
+  t.style.display = 'block';
+  setTimeout(() => t.style.display = 'none', 3000);
+}
+
+function createTeleconsult() {
+  showToast('✓ Sesión creada exitosamente', 'success');
+  setTimeout(() => showScreen('prof-manage'), 1000);
+}
+
+function startTeleconsult() {
+  document.getElementById('tc-status-badge').className = 'status-badge status-in-progress';
+  document.getElementById('tc-status-badge').textContent = 'En Curso';
+  document.getElementById('btn-start').disabled = true;
+  document.getElementById('btn-end').disabled = false;
+  document.getElementById('session-timer').style.display = 'block';
+  startTimer();
+  showToast('▶ Sesión iniciada - Paciente puede unirse', 'success');
+}
+
+function endTeleconsult() {
+  document.getElementById('tc-status-badge').className = 'status-badge status-completed';
+  document.getElementById('tc-status-badge').textContent = 'Completada';
+  document.getElementById('btn-end').disabled = true;
+  document.getElementById('session-timer').style.display = 'none';
+  showToast('⏹ Sesión finalizada', 'success');
+}
+
+let timerInterval;
+function startTimer() {
+  let sec = 0;
+  clearInterval(timerInterval);
+  timerInterval = setInterval(() => {
+    sec++;
+    document.getElementById('timer-display').textContent = 
+      String(Math.floor(sec/60)).padStart(2,'0') + ':' + String(sec%60).padStart(2,'0');
+  }, 1000);
+}
+
+function saveClinicalNote() {
+  const v = parseInt(document.getElementById('note-version').textContent) + 1;
+  document.getElementById('note-version').textContent = v;
+  showToast('💾 Nota guardada - Nueva versión #' + v, 'success');
+}
+
+function signClinicalNote() {
+  document.getElementById('note-status-badge').className = 'status-badge status-issued';
+  document.getElementById('note-status-badge').textContent = 'Firmada';
+  showToast('✍️ Nota firmada simple', 'success');
+}
+
+function createPrescription() {
+  document.getElementById('rx-status-badge').className = 'status-badge status-draft';
+  document.getElementById('rx-status-badge').textContent = 'Borrador';
+  document.getElementById('btn-issue-rx').disabled = false;
+  document.getElementById('btn-revoke-rx').disabled = true;
+  showToast('💾 Receta creada como borrador', 'success');
+}
+
+function issuePrescription() {
+  document.getElementById('rx-status-badge').className = 'status-badge status-issued';
+  document.getElementById('rx-status-badge').textContent = 'Emitida';
+  document.getElementById('btn-issue-rx').disabled = true;
+  document.getElementById('btn-revoke-rx').disabled = false;
+  showToast('✅ Receta emitida - Visible para paciente', 'success');
+}
+
+function revokePrescription() {
+  document.getElementById('rx-status-badge').className = 'status-badge status-draft';
+  document.getElementById('rx-status-badge').textContent = 'Revocada';
+  document.getElementById('btn-revoke-rx').disabled = true;
+  showToast('🚫 Receta revocada', 'error');
+}
+
+function saveCareInstructions() {
+  showToast('💾 Indicaciones guardadas', 'success');
+}
+
+function issueCareInstructions() {
+  document.getElementById('care-status-badge').className = 'status-badge status-issued';
+  document.getElementById('care-status-badge').textContent = 'Emitida';
+  showToast('✅ Indicaciones emitidas - Visible para paciente', 'success');
+}
+
+function joinTeleconsult() {
+  showToast('🔗 Uniéndote a la videollamada...', 'success');
+}
+
+function addAuditEntry(action, resourceType, resourceId) {
+  const tbody = document.getElementById('audit-tbody');
+  const now = new Date();
+  const time = now.toLocaleTimeString('es-EC', {hour:'2-digit', minute:'2-digit', second:'2-digit'});
+  const row = document.createElement('tr');
+  row.innerHTML = `<tr>
+    <td>${time}</td>
+    <td>${resourceType}</td>
+    <td><small>${resourceId}</small></td>
+    <td>Dr. María García</td>
+    <td>professional</td>
+    <td><span class="audit-action action-${action}">${action}</span></td>
+  </tr>`;
+  tbody.insertBefore(row, tbody.firstChild);
+}
+</script>
+
+</body>
+</html>
