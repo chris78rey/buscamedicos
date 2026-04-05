@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+import 'features/search/search_screen.dart';
 import 'services/api_service.dart';
 
 void main() => runApp(const BuscaMedicosApp());
@@ -52,7 +54,9 @@ class _AppBootstrapScreenState extends State<AppBootstrapScreen> {
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
     }
 
     if (_token != null && _token!.isNotEmpty) {
@@ -92,23 +96,21 @@ class _LoginScreenState extends State<LoginScreen> {
         _passwordController.text,
       );
 
-      if (result != null) {
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.setString('access_token', result['access_token']);
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('access_token', result['access_token'].toString());
 
-        if (!mounted) return;
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (_) => HomeScreen(token: result['access_token']),
-          ),
-        );
-      }
+      if (!mounted) return;
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (_) => HomeScreen(token: result['access_token'].toString()),
+        ),
+      );
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Error de login: $e')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error de login: $e')),
+      );
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -167,11 +169,11 @@ class _LoginScreenState extends State<LoginScreen> {
                   onPressed: _isLoading
                       ? null
                       : () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const RegisterScreen(),
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const RegisterScreen(),
+                            ),
                           ),
-                        ),
                   child: const Text('Crear cuenta'),
                 ),
               ],
@@ -227,24 +229,22 @@ class _RegisterScreenState extends State<RegisterScreen> {
         isPatient: _isPatient,
       );
 
-      if (result != null) {
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.setString('access_token', result['access_token']);
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('access_token', result['access_token'].toString());
 
-        if (!mounted) return;
-        Navigator.pushAndRemoveUntil(
-          context,
-          MaterialPageRoute(
-            builder: (_) => HomeScreen(token: result['access_token']),
-          ),
-          (route) => false,
-        );
-      }
+      if (!mounted) return;
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(
+          builder: (_) => HomeScreen(token: result['access_token'].toString()),
+        ),
+        (route) => false,
+      );
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Error de registro: $e')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error de registro: $e')),
+      );
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -342,6 +342,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
 class HomeScreen extends StatefulWidget {
   final String token;
+
   const HomeScreen({super.key, required this.token});
 
   @override
@@ -369,9 +370,9 @@ class _HomeScreenState extends State<HomeScreen> {
     } catch (e) {
       if (!mounted) return;
       setState(() => _isLoading = false);
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Error cargando usuario: $e')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error cargando usuario: $e')),
+      );
     }
   }
 
@@ -387,31 +388,202 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  Widget _buildBody() {
+    final user = _userData ?? {};
+    final actorType = (user['actor_type'] ?? '').toString();
+    final roles = List<String>.from(user['role_codes'] ?? const []);
+
+    if (actorType == 'patient' || roles.contains('patient')) {
+      return PatientDashboard(
+        token: widget.token,
+        userData: user,
+      );
+    }
+
+    if (actorType == 'professional' || roles.contains('professional')) {
+      return ProfessionalDashboard(userData: user);
+    }
+
+    if (actorType == 'admin' ||
+        roles.contains('super_admin') ||
+        roles.contains('admin_validation') ||
+        roles.contains('admin_support')) {
+      return AdminDashboard(userData: user);
+    }
+
+    return UnknownDashboard(userData: user);
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('BuscaMedicos'),
-        actions: [TextButton(onPressed: _logout, child: const Text('Logout'))],
+        actions: [
+          TextButton(
+            onPressed: _logout,
+            child: const Text('Logout'),
+          ),
+        ],
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
-          : Padding(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Sesión iniciada',
-                    style: Theme.of(context).textTheme.headlineMedium,
-                  ),
-                  const SizedBox(height: 16),
-                  Text('Email: ${_userData?['email'] ?? "Unknown"}'),
-                  const SizedBox(height: 8),
-                  Text('Estado: ${_userData?['status'] ?? "Unknown"}'),
-                ],
-              ),
+          : _buildBody(),
+    );
+  }
+}
+
+class PatientDashboard extends StatelessWidget {
+  final String token;
+  final Map<String, dynamic> userData;
+
+  const PatientDashboard({
+    super.key,
+    required this.token,
+    required this.userData,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final email = userData['email']?.toString() ?? '';
+
+    return ListView(
+      padding: const EdgeInsets.all(24),
+      children: [
+        Text(
+          'Panel de paciente',
+          style: Theme.of(context).textTheme.headlineMedium,
+        ),
+        const SizedBox(height: 8),
+        Text('Usuario: $email'),
+        const SizedBox(height: 24),
+        Card(
+          child: ListTile(
+            title: const Text('Buscar profesionales'),
+            subtitle: const Text(
+              'Permite listar perfiles públicos y revisar horarios',
             ),
+            trailing: const Icon(Icons.search),
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => SearchScreen(token: token),
+                ),
+              );
+            },
+          ),
+        ),
+        Card(
+          child: ListTile(
+            title: const Text('Mis citas'),
+            subtitle: const Text(
+              'Permite revisar las reservas realizadas',
+            ),
+            trailing: const Icon(Icons.calendar_month),
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => MyAppointmentsScreen(token: token),
+                ),
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class ProfessionalDashboard extends StatelessWidget {
+  final Map<String, dynamic> userData;
+
+  const ProfessionalDashboard({
+    super.key,
+    required this.userData,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final email = userData['email']?.toString() ?? '';
+
+    return ListView(
+      padding: const EdgeInsets.all(24),
+      children: [
+        Text(
+          'Panel profesional',
+          style: Theme.of(context).textTheme.headlineMedium,
+        ),
+        const SizedBox(height: 8),
+        Text('Usuario: $email'),
+        const SizedBox(height: 24),
+        const Card(
+          child: ListTile(
+            title: Text('Dashboard base habilitado'),
+            subtitle: Text(
+              'El siguiente bloque para profesional será perfil público, disponibilidad y gestión de citas.',
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class AdminDashboard extends StatelessWidget {
+  final Map<String, dynamic> userData;
+
+  const AdminDashboard({
+    super.key,
+    required this.userData,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final email = userData['email']?.toString() ?? '';
+
+    return ListView(
+      padding: const EdgeInsets.all(24),
+      children: [
+        Text(
+          'Panel administrativo',
+          style: Theme.of(context).textTheme.headlineMedium,
+        ),
+        const SizedBox(height: 8),
+        Text('Usuario: $email'),
+        const SizedBox(height: 24),
+        const Card(
+          child: ListTile(
+            title: Text('Dashboard base habilitado'),
+            subtitle: Text(
+              'El siguiente bloque para admin será operaciones simples, auditoría y seguimiento.',
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class UnknownDashboard extends StatelessWidget {
+  final Map<String, dynamic> userData;
+
+  const UnknownDashboard({
+    super.key,
+    required this.userData,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Text(
+          'No fue posible resolver el rol del usuario.\n\nRespuesta actual: $userData',
+          textAlign: TextAlign.center,
+        ),
+      ),
     );
   }
 }
