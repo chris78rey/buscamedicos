@@ -1,0 +1,42 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "skills": {
+    "local": [
+      {
+        "name": "alembic-migrations",
+        "description": "Alembic migration workflow for BuscaMedicos",
+        "path": ".skills/alembic-migrations"
+      },
+      {
+        "name": "docker-dev",
+        "description": "Docker Compose development workflow",
+        "path": ".skills/docker-dev"
+      },
+      {
+        "name": "fastapi-router",
+        "description": "FastAPI router creation pattern",
+        "path": ".skills/fastapi-router"
+      },
+      {
+        "name": "fastapi-error-handling",
+        "description": "Error handling patterns for FastAPI",
+        "path": ".skills/fastapi-error-handling"
+      },
+      {
+        "name": "pydantic-schemas",
+        "description": "Pydantic v2 schema creation",
+        "path": ".skills/pydantic-schemas"
+      },
+      {
+        "name": "sqlalchemy-models",
+        "description": "SQLAlchemy model creation",
+        "path": ".skills/sqlalchemy-models"
+      },
+      {
+        "name": "buscamedicos-testing",
+        "description": "Testing patterns for BuscaMedicos",
+        "path": ".skills/buscamedicos-testing"
+      }
+    ]
+  }
+}

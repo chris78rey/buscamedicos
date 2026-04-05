@@ -72,6 +72,7 @@ def upgrade() -> None:
     )
     op.create_index(op.f('ix_patient_privacy_consents_patient_id'), 'patient_privacy_consents', ['patient_id'], unique=False)
 
+    op.execute('DROP TABLE IF EXISTS exceptional_access_requests')
     op.create_table('exceptional_access_requests',
         sa.Column('id', sa.String(), nullable=False),
         sa.Column('requester_user_id', sa.String(), nullable=False),

@@ -10,7 +10,7 @@ class PricingPolicy(Base):
     code = Column(String, unique=True, nullable=False, index=True)
     name = Column(String, nullable=False)
     commission_type = Column(String, nullable=False)
-    commission_value = Column(String, nullable=False)
+    commission_value = Column(Numeric(precision=10, scale=2), nullable=False)
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
