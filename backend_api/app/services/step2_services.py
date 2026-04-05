@@ -4,9 +4,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_, or_
 from app.models.step2_models import (
     ProfessionalAvailability, ProfessionalTimeBlock, Appointment,
-    AppointmentStatusHistory, ProfessionalPublicProfile, Professional
+    AppointmentStatusHistory, ProfessionalPublicProfile
 )
-from app.models.professional import Professional as ProfessionalModel, OnboardingStatus, ProfessionalStatus
+from app.models.professional import Professional, OnboardingStatus, ProfessionalStatus
 
 VALID_TRANSITIONS = {
     "pending_confirmation": ["confirmed", "cancelled_by_patient", "cancelled_by_professional"],
@@ -93,7 +93,7 @@ class AppointmentService:
         patient_note: Optional[str] = None
     ) -> Appointment:
         prof_result = await db.execute(
-            select(ProfessionalModel).where(ProfessionalModel.id == professional_id)
+            select(Professional).where(Professional.id == professional_id)
         )
         prof = prof_result.scalar_one_or_none()
         if not prof or prof.status != ProfessionalStatus.ACTIVE or prof.onboarding_status != OnboardingStatus.APPROVED:
