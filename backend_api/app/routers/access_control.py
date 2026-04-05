@@ -4,7 +4,7 @@ from pydantic import BaseModel
 from app.core.database import get_db
 from app.core.dependencies import get_current_user
 from app.models.user import User
-from app.models.system import ExceptionalAccessRequest, ExceptionalAccessStatus
+from app.models.step7_models import ExceptionalAccessRequest, ExceptionalAccessRequestStatus
 
 router = APIRouter()
 
@@ -26,7 +26,7 @@ async def create_access_exception_request(
         resource_type=data.resource_type,
         resource_id=data.resource_id,
         reason=data.reason,
-        status=ExceptionalAccessStatus.REQUESTED
+        status=ExceptionalAccessRequestStatus.REQUESTED
     )
     db.add(request)
     await db.commit()

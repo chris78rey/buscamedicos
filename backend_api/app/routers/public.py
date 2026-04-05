@@ -2,8 +2,8 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from app.core.database import get_db
-from app.models.step2_models import Specialty, ProfessionalPublicProfile, Professional
-from app.models.professional import Professional as ProfModel, OnboardingStatus, ProfessionalStatus
+from app.models.step2_models import Specialty, ProfessionalPublicProfile
+from app.models.professional import Professional, OnboardingStatus, ProfessionalStatus
 from app.schemas.step2_schemas import PublicProfessionalResponse, SlotResponse
 from app.services.step2_services import SlotService
 
@@ -37,7 +37,7 @@ async def search_professionals(
     
     response = []
     for p in profiles:
-        prof_result = await db.execute(select(ProfModel).where(ProfModel.id == p.professional_id))
+        prof_result = await db.execute(select(Professional).where(Professional.id == p.professional_id))
         prof = prof_result.scalar_one_or_none()
         if not prof or prof.status != ProfessionalStatus.ACTIVE or prof.onboarding_status != OnboardingStatus.APPROVED:
             continue

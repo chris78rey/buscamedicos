@@ -4,34 +4,6 @@ from sqlalchemy import Column, String, DateTime, Enum as SQLEnum, Text
 from app.core.database import Base
 import enum
 
-class ExceptionalAccessStatus(str, enum.Enum):
-    REQUESTED = "requested"
-    APPROVED = "approved"
-    REJECTED = "rejected"
-    EXPIRED = "expired"
-    REVOKED = "revoked"
-
-class ExceptionalAccessRequest(Base):
-    __tablename__ = "exceptional_access_requests"
-
-    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
-    requester_user_id = Column(String, nullable=False, index=True)
-    target_user_id = Column(String, nullable=True)
-    resource_type = Column(String, nullable=False)
-    resource_id = Column(String, nullable=True)
-    reason = Column(Text, nullable=False)
-    patient_authorization_file_id = Column(String, nullable=True)
-    status = Column(SQLEnum(ExceptionalAccessStatus), default=ExceptionalAccessStatus.REQUESTED)
-    approved_by = Column(String, nullable=True)
-    approved_at = Column(DateTime, nullable=True)
-    expires_at = Column(DateTime, nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    deleted_at = Column(DateTime, nullable=True)
-    created_by = Column(String, nullable=True)
-    updated_by = Column(String, nullable=True)
-    deleted_by = Column(String, nullable=True)
-    version = Column(String, default="1")
 
 class SystemParameter(Base):
     __tablename__ = "system_parameters"

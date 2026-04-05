@@ -8,7 +8,8 @@ from app.models.step3_models import (
     PaymentIntentStatus, PaymentStatus, TransactionType, FinancialPaymentStatus,
     SettlementStatus, RefundStatus, SettlementBatchStatus
 )
-from app.models.step2_models import Appointment, Professional
+from app.models.step2_models import Appointment
+from app.models.professional import Professional
 from decimal import Decimal
 
 class PaymentProvider:
