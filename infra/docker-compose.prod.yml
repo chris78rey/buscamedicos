@@ -1,0 +1,75 @@
+version: "3.9"
+
+services:
+  caddy:
+    image: caddy:2-alpine
+    container_name: buscamedicos_caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+    depends_on:
+      backend_api:
+        condition: service_healthy
+    networks:
+      - internal
+
+  backend_api:
+    build:
+      context: ../backend_api
+      dockerfile: Dockerfile.prod
+    container_name: buscamedicos_backend
+    restart: unless-stopped
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      - SECRET_KEY=${SECRET_KEY}
+      - REDIS_URL=${REDIS_URL:-}
+      - APP_ENV=production
+      - DEBUG=false
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-}
+      - MAX_FILE_SIZE_MB=${MAX_FILE_SIZE_MB:-10}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - files_data:/app/files
+      - ./scripts:/app/scripts
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8000/health/live || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - internal
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: buscamedicos_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - internal
+
+volumes:
+  postgres_data:
+  files_data:
+  caddy_data:
+
+networks:
+  internal:
+    driver: bridge

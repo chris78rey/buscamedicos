@@ -22,3 +22,24 @@ from .step6_schemas import (
     SanctionCreate, SanctionResponse, SanctionLift,
     ReportAssign, ReportResolve, ReviewHideRestore, ReviewListResponse
 )
+from .step7_schemas import (
+    ConsentCreate, ConsentResponse,
+    ExceptionalAccessRequestCreate, ExceptionalAccessRequestResponse,
+    ApproveAccessRequest, ApproveAccessResponse, RejectAccessRequest, RevokeAccessRequest,
+    ClinicalAccessLogResponse, ClinicalAccessLogExportResponse,
+    ProcessingActivityCreate, ProcessingActivityResponse,
+    RetentionPolicyCreate, RetentionPolicyResponse,
+    PrivacyIncidentCreate, PrivacyIncidentResponse,
+    PrivacyIncidentAssign, PrivacyIncidentResolve, PrivacyIncidentContain, PrivacyIncidentDismiss,
+    PrivacyPolicyVersionCreate, PrivacyPolicyVersionResponse,
+    ResourceAccessPolicyUpdate, ResourceAccessPolicyResponse,
+    EvaluateAccessResponse, PrivacyIncidentEventResponse,
+    ExceptionalAccessGrantResponse,
+)
+from .step8_schemas import (
+    ReleaseRegister, ReleaseResponse,
+    JobResponse, JobRunResponse,
+    BackupRunResponse, BackupArtifactResponse, RestoreTestResponse,
+    HealthLiveResponse, HealthReadyResponse, HealthDetailsResponse, HealthSnapshotResponse,
+    RateLimitEventResponse, ConfigSummaryResponse, VersionResponse,
+)

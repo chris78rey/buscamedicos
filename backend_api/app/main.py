@@ -1,12 +1,63 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
+import uuid
+import json
+import time
+import logging
+from datetime import datetime
+from fastapi import Request
+
+__version__ = "1.0.0"
+
+structured_logger = logging.getLogger("buscamedicos.structured")
+structured_logger.setLevel(logging.INFO)
+_handler = logging.StreamHandler()
+_handler.setFormatter(logging.Formatter(
+    '{"timestamp": "%(asctime)s", "level": "%(levelname)s", "service": "buscamedicos-api", "message": "%(message)s"}'
+))
+structured_logger.addHandler(_handler)
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     yield
 
-app = FastAPI(title="BuscaMedicos API", version="1.0.0", lifespan=lifespan)
+
+app = FastAPI(
+    title="BuscaMedicos API",
+    version=__version__,
+    lifespan=lifespan,
+)
+
+
+@app.middleware("http")
+async def structured_logging_middleware(request: Request, call_next):
+    request_id = request.headers.get("x-request-id", str(uuid.uuid4()))
+    start = time.time()
+    response = await call_next(request)
+    duration_ms = int((time.time() - start) * 1000)
+
+    user_id = None
+    if hasattr(request.state, "user_id"):
+        user_id = str(request.state.user_id)
+
+    log_data = {
+        "timestamp": datetime.utcnow().isoformat(),
+        "level": "info" if response.status_code < 500 else "error",
+        "service": "buscamedicos-api",
+        "request_id": request_id,
+        "user_id": user_id,
+        "route": request.url.path,
+        "method": request.method,
+        "status_code": response.status_code,
+        "duration_ms": duration_ms,
+    }
+
+    structured_logger.info(json.dumps(log_data))
+    response.headers["x-request-id"] = request_id
+    return response
+
 
 app.add_middleware(
     CORSMiddleware,
@@ -24,7 +75,10 @@ from app.routers import (
     professional_teleconsultation_router, patient_teleconsultation_router,
     professional_clinical_router, patient_clinical_router, admin_clinical_router,
     public_reviews_router, patient_reviews_router, professional_reviews_router,
-    laboratory_reports_router, admin_moderation_router
+    laboratory_reports_router, admin_moderation_router,
+    patient_privacy_router, professional_privacy_router,
+    laboratory_privacy_router, admin_privacy_router,
+    privacy_auditor_router, ops_router,
 )
 
 app.include_router(auth_router, prefix="/api/v1/auth", tags=["auth"])
@@ -52,3 +106,9 @@ app.include_router(patient_reviews_router, prefix="/api/v1/patient", tags=["pati
 app.include_router(professional_reviews_router, prefix="/api/v1/professionals", tags=["professional-reviews"])
 app.include_router(laboratory_reports_router, prefix="/api/v1/laboratories", tags=["laboratory-reports"])
 app.include_router(admin_moderation_router, prefix="/api/v1/admin/moderation", tags=["admin-moderation"])
+app.include_router(patient_privacy_router, prefix="/api/v1/patient", tags=["patient-privacy"])
+app.include_router(professional_privacy_router, prefix="/api/v1/professionals", tags=["professional-privacy"])
+app.include_router(laboratory_privacy_router, prefix="/api/v1/laboratories", tags=["laboratory-privacy"])
+app.include_router(admin_privacy_router, prefix="/api/v1/admin", tags=["admin-privacy"])
+app.include_router(privacy_auditor_router, prefix="/api/v1/privacy-auditor", tags=["privacy-auditor"])
+app.include_router(ops_router)

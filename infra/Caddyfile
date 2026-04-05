@@ -1,0 +1,91 @@
+# Caddy reverse proxy for BuscaMedicos
+# TLS is automatic via Caddy's ACME client
+
+{
+    admin off
+    auto_https off
+}
+
+# Health and metrics (public)
+:8000 {
+    handle /health/live {
+        respond "OK" 200
+    }
+
+    handle /health/ready {
+        reverse_proxy localhost:8001 {
+            header_up Host {host}
+        }
+        respond "Backend not ready" 503
+    }
+
+    handle /version {
+        respond "1.0.0" 200
+    }
+
+    # Proxy to backend API
+    handle {
+        reverse_proxy localhost:8001 {
+            header_up Host {host}
+            header_up X-Real-IP {remote}
+            header_up X-Forwarded-For {remote}
+            header_up X-Forwarded-Proto {scheme}
+        }
+    }
+}
+
+# Main domain with TLS
+buscamedicos.example.com {
+    handle /health/live {
+        respond "OK" 200
+    }
+
+    handle /health/ready {
+        reverse_proxy localhost:8001 {
+            header_up Host {host}
+        }
+        respond "Backend not ready" 503
+    }
+
+    handle /api/* {
+        reverse_proxy localhost:8001 {
+            header_up Host {host}
+            header_up X-Real-IP {remote}
+            header_up X-Forwarded-For {remote}
+            header_up X-Forwarded-Proto {scheme}
+        }
+        header X-Content-Type-Options "nosniff"
+        header X-Frame-Options "DENY"
+        header Referrer-Policy "strict-origin-when-cross-origin"
+    }
+
+    handle /docs/* {
+        reverse_proxy localhost:8001 {
+            header_up Host {host}
+        }
+    }
+
+    handle /openapi.json {
+        reverse_proxy localhost:8001 {
+            header_up Host {host}
+        }
+    }
+
+    handle /* {
+        reverse_proxy localhost:8001 {
+            header_up Host {host}
+        }
+        header X-Content-Type-Options "nosniff"
+        header X-Frame-Options "DENY"
+        header Referrer-Policy "strict-origin-when-cross-origin"
+        header Strict-Transport-Security "max-age=31536000; includeSubDomains"
+    }
+
+    log {
+        output file /var/log/caddy/access.log {
+            roll true
+            roll_size 100mb
+            roll_keep 10
+        }
+    }
+}

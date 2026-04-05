@@ -23,6 +23,12 @@ from .patient_reviews import router as patient_reviews_router
 from .professional_reviews import router as professional_reviews_router
 from .laboratory_reports import router as laboratory_reports_router
 from .admin_moderation import router as admin_moderation_router
+from .patient_privacy import router as patient_privacy_router
+from .professional_privacy import router as professional_privacy_router
+from .laboratory_privacy import router as laboratory_privacy_router
+from .admin_privacy import router as admin_privacy_router
+from .privacy_auditor import router as privacy_auditor_router
+from .ops import router as ops_router
 
 __all__ = [
     "auth_router", "users_router", "patients_router", "professionals_router",
@@ -34,5 +40,8 @@ __all__ = [
     "patient_clinical_router", "admin_clinical_router",
     "public_reviews_router", "patient_reviews_router",
     "professional_reviews_router", "laboratory_reports_router",
-    "admin_moderation_router"
+    "admin_moderation_router",
+    "patient_privacy_router", "professional_privacy_router",
+    "laboratory_privacy_router", "admin_privacy_router",
+    "privacy_auditor_router", "ops_router",
 ]

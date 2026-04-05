@@ -1,0 +1,33 @@
+# Environment and secrets
+infra/.env
+.env
+*.env.local
+
+# OS artifacts
+nul
+Thumbs.db
+.DS_Store
+
+# Generated
+repomix-output.xml
+*.log
+
+# Python
+__pycache__/
+*.py[cod]
+*.so
+.Python
+.venv/
+venv/
+ENV/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/

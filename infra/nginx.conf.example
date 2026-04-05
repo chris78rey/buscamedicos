@@ -1,0 +1,7 @@
+{
+  "admin": {
+    "public": ["{BACKEND_HOST}/api/v1/admin/ops/releases", "{BACKEND_HOST}/api/v1/admin/ops/jobs", "{BACKEND_HOST}/api/v1/admin/ops/backups"],
+    "per_ip": 100,
+    "per_user": 200
+  }
+}
