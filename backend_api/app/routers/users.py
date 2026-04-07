@@ -2,11 +2,13 @@ from typing import List, Optional
 
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
 from pydantic import BaseModel
 
 from app.core.database import get_db
 from app.core.dependencies import get_current_user
 from app.models.user import User
+from app.models.role import Role, UserRole, UserRoleStatus
 
 router = APIRouter()
 
@@ -25,9 +27,19 @@ class UserMeResponse(BaseModel):
 
 
 @router.get("/me", response_model=UserMeResponse)
-async def get_me(current_user: User = Depends(get_current_user)):
-    await current_user.awaitable_attrs.roles
-    role_codes = sorted([role.code for role in current_user.roles])
+async def get_me(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    result = await db.execute(
+        select(Role.code)
+        .join(UserRole, UserRole.role_id == Role.id)
+        .where(
+            UserRole.user_id == current_user.id,
+            UserRole.status == UserRoleStatus.ACTIVE,
+        )
+    )
+    role_codes = sorted([str(row[0]) for row in result.all()])
 
     primary_role = None
     for candidate in [

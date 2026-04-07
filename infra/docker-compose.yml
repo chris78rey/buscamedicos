@@ -36,6 +36,21 @@ services:
       - ../backend_api:/app
       - files_data:/app/files
 
+  backend_seed:
+    build:
+      context: ../backend_api
+      dockerfile: Dockerfile
+    container_name: buscamedicos_backend_seed
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-buscamedicos}:${POSTGRES_PASSWORD:-buscamedicos123}@postgres:5432/${POSTGRES_DB:-buscamedicos}
+      SECRET_KEY: ${SECRET_KEY:-dev-secret-key-buscamedicos}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: ["sh", "-c", "alembic upgrade head && python -m scripts.seed"]
+    volumes:
+      - ../backend_api:/app
+
 volumes:
   postgres_data:
   files_data:

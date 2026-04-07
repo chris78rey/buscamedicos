@@ -186,11 +186,16 @@ class _SearchScreenState extends State<SearchScreen> {
                         separatorBuilder: (_, __) => const Divider(height: 1),
                         itemBuilder: (_, i) {
                           final item = _results[i] as Map<String, dynamic>;
+                          final specialties = (item['specialties'] as List?)
+                              ?.map((s) => (s as Map?)?['name'] ?? s)
+                              .where((s) => s.toString().trim().isNotEmpty)
+                              .join(', ');
                           return ListTile(
                             title: Text(item['public_display_name'] ?? 'Sin nombre'),
                             subtitle: Text(
                               [
                                 item['public_title'] ?? '',
+                                specialties ?? '',
                                 item['city'] ?? '',
                                 item['consultation_price'] != null
                                     ? '\$${item['consultation_price']}'
@@ -379,6 +384,11 @@ class _ProfessionalDetailScreenState extends State<ProfessionalDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final specialties = (_profile?['specialties'] as List?)
+        ?.map((s) => (s as Map?)?['name'] ?? s)
+        .where((s) => s.toString().trim().isNotEmpty)
+        .join(', ');
+
     return Scaffold(
       appBar: AppBar(
         title: Text(_profile?['public_display_name'] ?? 'Perfil profesional'),
@@ -402,6 +412,8 @@ class _ProfessionalDetailScreenState extends State<ProfessionalDetailScreen> {
                   ),
                   const SizedBox(height: 8),
                   Text(_profile?['public_bio'] ?? 'Sin biografía pública'),
+                  if (specialties != null && specialties.isNotEmpty)
+                    Text('Especialidades: $specialties'),
                   const SizedBox(height: 16),
                   Text('Ciudad: ${_profile?['city'] ?? ''}'),
                   Text('Provincia: ${_profile?['province'] ?? ''}'),

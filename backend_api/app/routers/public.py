@@ -1,8 +1,8 @@
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, or_
 from app.core.database import get_db
-from app.models.step2_models import Specialty, ProfessionalPublicProfile
+from app.models.step2_models import Specialty, ProfessionalPublicProfile, ProfessionalSpecialty
 from app.models.professional import Professional, OnboardingStatus, ProfessionalStatus
 from app.schemas.step2_schemas import PublicProfessionalResponse, SlotResponse
 from app.services.step2_services import SlotService
@@ -27,6 +27,26 @@ async def search_professionals(
         ProfessionalPublicProfile.deleted_at.is_(None)
     )
     
+    if specialty:
+        query = (
+            select(ProfessionalPublicProfile)
+            .join(
+                ProfessionalSpecialty,
+                ProfessionalSpecialty.professional_id == ProfessionalPublicProfile.professional_id,
+            )
+            .join(Specialty, Specialty.id == ProfessionalSpecialty.specialty_id)
+            .where(
+                ProfessionalPublicProfile.is_public == True,
+                ProfessionalPublicProfile.deleted_at.is_(None),
+                Specialty.is_active == True,
+                Specialty.deleted_at.is_(None),
+                or_(
+                    Specialty.code == specialty,
+                    Specialty.name.ilike(f"%{specialty}%"),
+                ),
+            )
+        )
+    
     if province:
         query = query.where(ProfessionalPublicProfile.province == province)
     if city:
@@ -34,6 +54,27 @@ async def search_professionals(
     
     result = await db.execute(query)
     profiles = result.scalars().all()
+    
+    prof_ids = [p.professional_id for p in profiles]
+    specialties_map = {}
+    if prof_ids:
+        spec_result = await db.execute(
+            select(
+                ProfessionalSpecialty.professional_id,
+                Specialty.name,
+                Specialty.code,
+            )
+            .join(Specialty, Specialty.id == ProfessionalSpecialty.specialty_id)
+            .where(
+                ProfessionalSpecialty.professional_id.in_(prof_ids),
+                Specialty.is_active == True,
+                Specialty.deleted_at.is_(None),
+            )
+        )
+        for row in spec_result.all():
+            specialties_map.setdefault(row[0], []).append(
+                {"code": row[2], "name": row[1]}
+            )
     
     response = []
     for p in profiles:
@@ -47,7 +88,7 @@ async def search_professionals(
             "public_slug": prof.public_slug,
             "public_display_name": prof.public_display_name,
             "public_title": p.public_title,
-            "specialties": [],
+            "specialties": specialties_map.get(p.professional_id, []),
             "province": p.province,
             "city": p.city,
             "sector": p.sector,
@@ -83,12 +124,23 @@ async def get_public_professional(identifier: str, db: AsyncSession = Depends(ge
         from fastapi import HTTPException
         raise HTTPException(status_code=404, detail="Professional profile not public")
     
+    specialties_result = await db.execute(
+        select(Specialty.name, Specialty.code)
+        .join(ProfessionalSpecialty, ProfessionalSpecialty.specialty_id == Specialty.id)
+        .where(
+            ProfessionalSpecialty.professional_id == prof.id,
+            Specialty.is_active == True,
+            Specialty.deleted_at.is_(None),
+        )
+    )
+    specialties = [{"code": row[1], "name": row[0]} for row in specialties_result.all()]
+
     return {
         "professional_id": prof.id,
         "public_display_name": prof.public_display_name,
         "public_title": profile.public_title,
         "public_bio": profile.public_bio,
-        "specialties": [],
+        "specialties": specialties,
         "province": profile.province,
         "city": profile.city,
         "sector": profile.sector,

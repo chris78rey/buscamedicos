@@ -68,6 +68,7 @@ async def register_patient(data: RegisterPatientRequest, db: AsyncSession = Depe
         phone=data.phone
     )
     db.add(person)
+    await db.flush()
     
     patient = Patient(user_id=user.id, person_id=person.id)
     db.add(patient)
@@ -99,6 +100,7 @@ async def register_professional(data: RegisterProfessionalRequest, db: AsyncSess
         phone=data.phone
     )
     db.add(person)
+    await db.flush()
     
     professional = Professional(
         user_id=user.id,
