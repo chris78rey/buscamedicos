@@ -14,6 +14,7 @@ definePageMeta({
         Pantalla base para futura conexión de cola de denuncias y revisión.
       </v-card-subtitle>
     </v-card-item>
+
     <v-card-text>
       Se debe conectar a endpoints reales de denuncias, revisión, decisión y bitácora cuando esa fase sea implementada.
     </v-card-text>

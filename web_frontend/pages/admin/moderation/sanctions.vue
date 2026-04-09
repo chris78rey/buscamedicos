@@ -14,6 +14,7 @@ definePageMeta({
         Pantalla base para gestión de sanciones futuras.
       </v-card-subtitle>
     </v-card-item>
+
     <v-card-text>
       Se debe conectar a endpoints de suspensión, restricción, levantamiento y auditoría cuando exista la fase de moderación.
     </v-card-text>

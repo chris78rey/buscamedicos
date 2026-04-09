@@ -14,6 +14,7 @@ definePageMeta({
         Pantalla base para fase financiera administrativa.
       </v-card-subtitle>
     </v-card-item>
+
     <v-card-text>
       Se debe conectar a endpoints reales de liquidaciones, conciliación, estado y exportación cuando la fase financiera quede cerrada.
     </v-card-text>
