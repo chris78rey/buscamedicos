@@ -7,14 +7,26 @@ definePageMeta({
 
 const cards = [
   {
+    title: 'Perfil y agenda',
+    text: 'Configura nombre público, perfil visible, horarios semanales y bloqueos puntuales para habilitar reservas reales.',
+    to: '/professional/agenda',
+    icon: 'mdi-calendar-clock-outline',
+  },
+  {
     title: 'Citas',
-    text: 'Revisa agenda, estados y seguimiento clinico inicial.',
+    text: 'Revisa agenda, estados y seguimiento clínico inicial.',
     to: '/professional/appointments',
     icon: 'mdi-calendar-account',
   },
   {
+    title: 'Precios',
+    text: 'Administra valores operativos por modalidad para el flujo económico.',
+    to: '/professional/prices',
+    icon: 'mdi-cash-multiple',
+  },
+  {
     title: 'Teleconsulta',
-    text: 'Prepara el acceso a sesiones virtuales y herramientas clinicas.',
+    text: 'Prepara el acceso a sesiones virtuales y herramientas clínicas.',
     to: '/professional/teleconsultation/demo-appointment',
     icon: 'mdi-video-outline',
   },
@@ -29,7 +41,7 @@ const cards = [
 
 <template>
   <v-row>
-    <v-col v-for="card in cards" :key="card.to" cols="12" md="4">
+    <v-col v-for="card in cards" :key="card.to" cols="12" md="6" lg="4">
       <v-card class="h-100" rounded="xl">
         <v-card-item :prepend-icon="card.icon">
           <v-card-title>{{ card.title }}</v-card-title>

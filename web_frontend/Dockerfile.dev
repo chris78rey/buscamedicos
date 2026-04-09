@@ -1,0 +1,15 @@
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Instalamos dependencias
+COPY package*.json ./
+RUN npm install
+
+# Copiamos el resto del código
+COPY . .
+
+EXPOSE 3000
+
+# Iniciamos Nuxt en modo desarrollo
+CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0", "--port", "3000"]

@@ -51,6 +51,26 @@ services:
     volumes:
       - ../backend_api:/app
 
+  web_frontend:
+    build:
+      context: ../web_frontend
+      dockerfile: Dockerfile.dev
+    container_name: buscamedicos_web_frontend
+    environment:
+      NUXT_PUBLIC_API_BASE: http://localhost:8000/api/v1
+      HOST: 0.0.0.0
+      PORT: 3000
+      NODE_ENV: development
+    ports:
+      - "3000:3000"
+    volumes:
+      - ../web_frontend:/app
+      - web_frontend_node_modules:/app/node_modules
+    depends_on:
+      - backend_api
+    restart: unless-stopped
+
 volumes:
   postgres_data:
   files_data:
+  web_frontend_node_modules:

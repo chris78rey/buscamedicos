@@ -424,4 +424,67 @@ class ApiService {
       throw _httpException('Issue care instructions', response);
     }
   }
+
+  static Future<List<dynamic>> getProfessionalAppointments(String token) async {
+    final response = await http.get(
+      Uri.parse('$baseUrl/professionals/me/appointments'),
+      headers: _authHeaders(token),
+    );
+
+    if (response.statusCode == 200) {
+      return List<dynamic>.from(_decodeBody(response) as List);
+    }
+
+    throw _httpException('Get professional appointments', response);
+  }
+
+  static Future<Map<String, dynamic>> confirmAppointment(
+    String token,
+    String appointmentId,
+  ) async {
+    final response = await http.post(
+      Uri.parse('$baseUrl/professionals/me/appointments/$appointmentId/confirm'),
+      headers: _authHeaders(token, json: true),
+    );
+
+    if (response.statusCode == 200) {
+      return Map<String, dynamic>.from(_decodeBody(response) as Map);
+    }
+
+    throw _httpException('Confirm appointment', response);
+  }
+
+  static Future<Map<String, dynamic>> cancelAppointment(
+    String token,
+    String appointmentId, {
+    String? reason,
+  }) async {
+    final response = await http.post(
+      Uri.parse('$baseUrl/professionals/me/appointments/$appointmentId/cancel'),
+      headers: _authHeaders(token, json: true),
+      body: reason != null ? jsonEncode({'reason': reason}) : null,
+    );
+
+    if (response.statusCode == 200) {
+      return Map<String, dynamic>.from(_decodeBody(response) as Map);
+    }
+
+    throw _httpException('Cancel appointment', response);
+  }
+
+  static Future<Map<String, dynamic>> completeAppointment(
+    String token,
+    String appointmentId,
+  ) async {
+    final response = await http.post(
+      Uri.parse('$baseUrl/professionals/me/appointments/$appointmentId/complete'),
+      headers: _authHeaders(token, json: true),
+    );
+
+    if (response.statusCode == 200) {
+      return Map<String, dynamic>.from(_decodeBody(response) as Map);
+    }
+
+    throw _httpException('Complete appointment', response);
+  }
 }

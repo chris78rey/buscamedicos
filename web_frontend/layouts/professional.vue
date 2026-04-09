@@ -3,6 +3,7 @@ const authStore = useAuthStore()
 
 const links = [
   { title: 'Dashboard', to: '/professional/dashboard', icon: 'mdi-view-dashboard' },
+  { title: 'Agenda', to: '/professional/agenda', icon: 'mdi-calendar-clock' },
   { title: 'Citas', to: '/professional/appointments', icon: 'mdi-calendar-account' },
   { title: 'Precios', to: '/professional/prices', icon: 'mdi-cash-multiple' },
   { title: 'Ganancias', to: '/professional/earnings', icon: 'mdi-chart-line' },

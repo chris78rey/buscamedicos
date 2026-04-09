@@ -303,6 +303,31 @@ export function useApi() {
       method: 'GET',
     })
   }
+  
+  async function getProfessionalAppointments(): Promise<AppointmentSummary[]> {
+    return await apiFetch<AppointmentSummary[]>('/professionals/me/appointments', {
+      method: 'GET',
+    })
+  }
+
+  async function confirmAppointment(appointmentId: string): Promise<AppointmentSummary> {
+    return await apiFetch<AppointmentSummary>(`/professionals/me/appointments/${encodeURIComponent(appointmentId)}/confirm`, {
+      method: 'POST',
+    })
+  }
+
+  async function cancelAppointment(appointmentId: string, reason?: string): Promise<AppointmentSummary> {
+    return await apiFetch<AppointmentSummary>(`/professionals/me/appointments/${encodeURIComponent(appointmentId)}/cancel`, {
+      method: 'POST',
+      body: reason ? { reason } : undefined,
+    })
+  }
+
+  async function completeAppointment(appointmentId: string): Promise<AppointmentSummary> {
+    return await apiFetch<AppointmentSummary>(`/professionals/me/appointments/${encodeURIComponent(appointmentId)}/complete`, {
+      method: 'POST',
+    })
+  }
 
   async function getPrivacyAuditorAccessLogs(
     filters: AuditorLogFilters = {},
@@ -510,6 +535,10 @@ export function useApi() {
     createExceptionalAccessRequest,
     getProfessionalExceptionalAccessRequests,
     getProfessionalAccessLogs,
+    getProfessionalAppointments,
+    confirmAppointment,
+    cancelAppointment,
+    completeAppointment,
     getPrivacyAuditorAccessLogs,
     getAdminPrivacyPolicies,
     createAdminPrivacyPolicy,
