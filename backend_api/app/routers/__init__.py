@@ -29,6 +29,7 @@ from .laboratory_privacy import router as laboratory_privacy_router
 from .admin_privacy import router as admin_privacy_router
 from .privacy_auditor import router as privacy_auditor_router
 from .ops import router as ops_router
+from .admin_management import router as admin_management_router
 
 __all__ = [
     "auth_router", "users_router", "patients_router", "professionals_router",
@@ -43,5 +44,5 @@ __all__ = [
     "admin_moderation_router",
     "patient_privacy_router", "professional_privacy_router",
     "laboratory_privacy_router", "admin_privacy_router",
-    "privacy_auditor_router", "ops_router",
+    "privacy_auditor_router", "ops_router", "admin_management_router",
 ]

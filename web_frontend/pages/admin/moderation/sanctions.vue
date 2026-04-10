@@ -2,21 +2,34 @@
 definePageMeta({
   layout: 'admin',
   middleware: ['auth', 'role'],
-  roles: ['super_admin', 'admin_validation', 'admin_support', 'admin_moderation', 'admin_privacy'],
+  roles: ['super_admin', 'admin_moderation'],
 })
 </script>
 
 <template>
-  <v-card rounded="xl">
-    <v-card-item>
-      <v-card-title>Sanciones</v-card-title>
-      <v-card-subtitle>
-        Pantalla base para gestión de sanciones futuras.
-      </v-card-subtitle>
-    </v-card-item>
+  <v-container>
+    <h1 class="text-h4 font-weight-bold mb-2">Historial de Sanciones</h1>
+    <p class="text-subtitle-1 text-medium-emphasis mb-6">Registro de amonestaciones, suspensiones y expulsiones del sistema.</p>
 
-    <v-card-text>
-      Se debe conectar a endpoints de suspensión, restricción, levantamiento y auditoría cuando exista la fase de moderación.
-    </v-card-text>
-  </v-card>
+    <v-card rounded="xl" elevation="2">
+      <v-table>
+        <thead>
+          <tr>
+            <th>Usuario</th>
+            <th>Tipo</th>
+            <th>Motivo</th>
+            <th>Fecha</th>
+            <th>Estado</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td colspan="5" class="text-center py-8 text-medium-emphasis italic">
+              No se han emitido sanciones en los últimos 30 días.
+            </td>
+          </tr>
+        </tbody>
+      </v-table>
+    </v-card>
+  </v-container>
 </template>

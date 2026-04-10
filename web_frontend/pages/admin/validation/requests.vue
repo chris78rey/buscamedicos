@@ -8,6 +8,7 @@ definePageMeta({
 })
 
 const {
+  apiFetch,
   getAdminVerificationRequests,
   getAdminVerificationRequest,
   assignAdminVerificationRequest,
@@ -17,6 +18,9 @@ const {
   rejectAdminVerification,
   requestCorrectionAdminVerification,
 } = useApi()
+
+const config = useRuntimeConfig()
+const apiBase = config.public.apiBase
 
 const loading = ref(false)
 const detailLoading = ref(false)
@@ -176,6 +180,14 @@ const headers = [
 function formatDate(dateStr: string) {
   if (!dateStr) return '-'
   return new Date(dateStr).toLocaleDateString()
+}
+
+function getFullDownloadUrl(url: string) {
+  if (!url) return '#'
+  // En desarrollo local, el API suele estar en el puerto 8000
+  // Esta lógica asegura que salgamos del servidor de Nuxt (3000) hacia el backend (8000)
+  const origin = window.location.origin.replace(':3000', ':8000')
+  return `${origin}${url}`
 }
 </script>
 
@@ -353,7 +365,7 @@ function formatDate(dateStr: string) {
                           <v-btn
                             color="primary"
                             prepend-icon="mdi-download"
-                            :href="doc.download_url"
+                            :href="getFullDownloadUrl(doc.download_url)"
                             target="_blank"
                             variant="tonal"
                           >

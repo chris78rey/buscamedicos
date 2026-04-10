@@ -57,6 +57,13 @@ async def seed():
                 is_system=True,
             ),
             Role(
+                id="role_admin_validation",
+                code="admin_validation",
+                name="Admin Validacion",
+                description="Professional verification management",
+                is_system=True,
+            ),
+            Role(
                 id="role_admin_moderation",
                 code="admin_moderation",
                 name="Admin Moderacion",

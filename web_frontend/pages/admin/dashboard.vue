@@ -30,12 +30,28 @@ const cards = [
     to: '/admin/payments/settlements',
     icon: 'mdi-cash-multiple',
   },
+  {
+    title: 'Staff y Usuarios',
+    text: 'Administra cuentas de administradores y roles del sistema.',
+    to: '/admin/users',
+    icon: 'mdi-account-group-outline',
+  },
 ]
+const authStore = useAuthStore()
+
+const visibleCards = computed(() => {
+  return cards.filter(card => {
+    if (card.to === '/admin/users') {
+      return authStore.user?.role_codes?.includes('super_admin')
+    }
+    return true
+  })
+})
 </script>
 
 <template>
   <v-row>
-    <v-col v-for="card in cards" :key="card.to" cols="12" md="4">
+    <v-col v-for="card in visibleCards" :key="card.to" cols="12" md="4">
       <v-card class="h-100" rounded="xl">
         <v-card-item :prepend-icon="card.icon">
           <v-card-title>{{ card.title }}</v-card-title>

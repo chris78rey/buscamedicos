@@ -31,7 +31,6 @@ const {
 } = useProfessionalAgenda()
 
 const loadingAll = ref(false)
-const savingProfile = ref(false)
 const savingAvailability = ref(false)
 const savingBlock = ref(false)
 const deletingAvailabilityId = ref<string | null>(null)
@@ -39,22 +38,6 @@ const deletingBlockId = ref<string | null>(null)
 
 const errorMessage = ref('')
 const successMessage = ref('')
-
-const professionalForm = reactive({
-  public_display_name: '',
-})
-
-const profileForm = reactive({
-  public_title: '',
-  public_bio: '',
-  consultation_price: null as number | null,
-  province: '',
-  city: '',
-  sector: '',
-  years_experience: null as number | null,
-  languages_json: '',
-  is_public: false,
-})
 
 const availabilityForm = reactive({
   weekday: 0,
@@ -160,30 +143,14 @@ async function loadAll() {
 
   try {
     const [
-      professional,
-      profile,
       availabilityRows,
       blockRows,
       modalityRows,
     ] = await Promise.all([
-      getProfessionalMe(),
-      getMyPublicProfile(),
       getMyAvailabilities(),
       getMyTimeBlocks(),
       getMyModalities().catch(() => modalityOptions.value),
     ])
-
-    professionalForm.public_display_name = professional.public_display_name || ''
-
-    profileForm.public_title = profile.public_title || ''
-    profileForm.public_bio = profile.public_bio || ''
-    profileForm.consultation_price = profile.consultation_price ?? null
-    profileForm.province = profile.province || ''
-    profileForm.city = profile.city || ''
-    profileForm.sector = profile.sector || ''
-    profileForm.years_experience = profile.years_experience ?? null
-    profileForm.languages_json = profile.languages_json || ''
-    profileForm.is_public = Boolean(profile.is_public)
 
     availabilities.value = availabilityRows
     timeBlocks.value = blockRows
@@ -201,36 +168,6 @@ async function loadAll() {
   }
 }
 
-async function handleSaveProfile() {
-  savingProfile.value = true
-  clearMessages()
-
-  try {
-    await updateProfessionalMe({
-      public_display_name: professionalForm.public_display_name || null,
-    })
-
-    await updateMyPublicProfile({
-      public_title: profileForm.public_title,
-      public_bio: profileForm.public_bio || null,
-      consultation_price: profileForm.consultation_price,
-      province: profileForm.province || null,
-      city: profileForm.city || null,
-      sector: profileForm.sector || null,
-      years_experience: profileForm.years_experience,
-      languages_json: profileForm.languages_json || null,
-      is_public: profileForm.is_public,
-    })
-
-    successMessage.value = 'Perfil y configuración pública guardados correctamente.'
-  }
-  catch (error: unknown) {
-    errorMessage.value = resolveError(error, 'No se pudo guardar el perfil público.')
-  }
-  finally {
-    savingProfile.value = false
-  }
-}
 
 async function handleSaveAvailability() {
   savingAvailability.value = true
@@ -414,105 +351,6 @@ onMounted(() => {
     </v-alert>
 
     <v-row>
-      <v-col cols="12" lg="6">
-        <v-card rounded="xl">
-          <v-card-item prepend-icon="mdi-account-card-outline">
-            <v-card-title>Perfil público</v-card-title>
-            <v-card-subtitle>
-              Esta información alimenta la búsqueda pública y el detalle del profesional.
-            </v-card-subtitle>
-          </v-card-item>
-
-          <v-card-text class="d-flex flex-column ga-4">
-            <v-text-field
-              v-model="professionalForm.public_display_name"
-              label="Nombre público"
-              variant="outlined"
-            />
-
-            <v-text-field
-              v-model="profileForm.public_title"
-              label="Título público"
-              variant="outlined"
-            />
-
-            <v-textarea
-              v-model="profileForm.public_bio"
-              label="Biografía pública"
-              rows="5"
-              variant="outlined"
-            />
-
-            <v-text-field
-              v-model.number="profileForm.consultation_price"
-              label="Precio referencial público (USD)"
-              type="number"
-              min="0"
-              step="0.01"
-              variant="outlined"
-            />
-
-            <v-row>
-              <v-col cols="12" md="6">
-                <v-text-field
-                  v-model="profileForm.province"
-                  label="Provincia"
-                  variant="outlined"
-                />
-              </v-col>
-              <v-col cols="12" md="6">
-                <v-text-field
-                  v-model="profileForm.city"
-                  label="Ciudad"
-                  variant="outlined"
-                />
-              </v-col>
-            </v-row>
-
-            <v-text-field
-              v-model="profileForm.sector"
-              label="Sector"
-              variant="outlined"
-            />
-
-            <v-text-field
-              v-model.number="profileForm.years_experience"
-              label="Años de experiencia"
-              type="number"
-              min="0"
-              variant="outlined"
-            />
-
-            <v-text-field
-              v-model="profileForm.languages_json"
-              label="Idiomas visibles"
-              hint="Ejemplo: español, inglés"
-              persistent-hint
-              variant="outlined"
-            />
-
-            <v-switch
-              v-model="profileForm.is_public"
-              color="primary"
-              inset
-              label="Publicar perfil en búsqueda"
-            />
-          </v-card-text>
-
-          <v-card-actions>
-            <v-spacer />
-            <v-btn
-              color="primary"
-              :loading="savingProfile"
-              prepend-icon="mdi-content-save-outline"
-              @click="handleSaveProfile"
-            >
-              Guardar perfil
-            </v-btn>
-          </v-card-actions>
-        </v-card>
-      </v-col>
-
       <v-col cols="12" lg="6">
         <v-card rounded="xl" class="mb-6">
           <v-card-item prepend-icon="mdi-calendar-clock-outline">

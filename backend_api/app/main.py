@@ -78,7 +78,7 @@ from app.routers import (
     laboratory_reports_router, admin_moderation_router,
     patient_privacy_router, professional_privacy_router,
     laboratory_privacy_router, admin_privacy_router,
-    privacy_auditor_router, ops_router,
+    privacy_auditor_router, ops_router, admin_management_router,
 )
 
 app.include_router(auth_router, prefix="/api/v1/auth", tags=["auth"])
@@ -111,4 +111,5 @@ app.include_router(professional_privacy_router, prefix="/api/v1/professionals", 
 app.include_router(laboratory_privacy_router, prefix="/api/v1/laboratories", tags=["laboratory-privacy"])
 app.include_router(admin_privacy_router, prefix="/api/v1/admin", tags=["admin-privacy"])
 app.include_router(privacy_auditor_router, prefix="/api/v1/privacy-auditor", tags=["privacy-auditor"])
+app.include_router(admin_management_router, prefix="/api/v1", tags=["admin-management"])
 app.include_router(ops_router)
