@@ -27,21 +27,22 @@ export const useAuthStore = defineStore('auth', {
     user: null,
     loaded: false,
   }),
+
   getters: {
     roleCodes: (state): RoleCode[] => getRoleCodes(state.user),
     isAuthenticated: (state): boolean => Boolean(state.token),
   },
+
   actions: {
-    hydrateFromCookie() {
-      const cookie = useCookie<string | null>('access_token')
-      this.token = cookie.value ?? null
+    hydrate(token: string | null) {
+      this.token = token
       return this.token
     },
+
     setToken(token: string | null) {
       this.token = token
-      const cookie = useCookie<string | null>('access_token')
-      cookie.value = token
     },
+
     async fetchMe() {
       const { apiFetch } = useApi()
 
@@ -61,8 +62,9 @@ export const useAuthStore = defineStore('auth', {
       this.loaded = true
       return this.user
     },
-    async bootstrap() {
-      this.hydrateFromCookie()
+
+    async bootstrap(initialToken: string | null = null) {
+      this.hydrate(initialToken)
 
       if (!this.token) {
         this.user = null
@@ -74,13 +76,16 @@ export const useAuthStore = defineStore('auth', {
         return await this.fetchMe()
       }
       catch {
-        this.logout()
+        this.user = null
+        this.token = null
+        this.loaded = true
         return null
       }
     },
+
     logout() {
       this.user = null
-      this.setToken(null)
+      this.token = null
       this.loaded = true
     },
   },

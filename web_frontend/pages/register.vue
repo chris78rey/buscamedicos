@@ -11,7 +11,7 @@ definePageMeta({
 
 const authStore = useAuthStore()
 const { apiFetch } = useApi()
-const { resolveRoleHome } = useAuth()
+const { resolveRoleHome, syncAccessToken } = useAuth()
 
 const accountRole = ref<RegisterRole>('patient')
 const form = reactive<RegisterPayload>({
@@ -60,7 +60,9 @@ async function handleSubmit() {
       body: payload,
     })
 
+    syncAccessToken(response.access_token)
     authStore.setToken(response.access_token)
+
     await authStore.fetchMe()
     await navigateTo(resolveRoleHome(authStore.roleCodes))
   }
@@ -90,46 +92,27 @@ async function handleSubmit() {
         {{ formError }}
       </v-alert>
 
-      <v-switch
-        v-model="accountRole"
-        class="mb-4"
-        color="primary"
-        false-value="patient"
-        inset
-        label="Crear cuenta profesional"
-        true-value="professional"
-      />
-
       <v-form @submit.prevent="handleSubmit">
-        <v-row>
-          <v-col cols="12" md="6">
-            <v-text-field v-model="form.first_name" label="Nombres" variant="outlined" />
-          </v-col>
-          <v-col cols="12" md="6">
-            <v-text-field v-model="form.last_name" label="Apellidos" variant="outlined" />
-          </v-col>
-          <v-col cols="12">
-            <v-text-field v-model="form.email" label="Email" type="email" variant="outlined" />
-          </v-col>
-          <v-col cols="12">
-            <v-text-field v-model="form.password" label="Contrasena" type="password" variant="outlined" />
-          </v-col>
-          <v-col cols="12" md="6">
-            <v-text-field v-model="form.national_id" label="Cedula" variant="outlined" />
-          </v-col>
-          <v-col cols="12" md="6">
-            <v-text-field v-model="form.phone" label="Telefono" variant="outlined" />
-          </v-col>
-        </v-row>
+        <v-radio-group v-model="accountRole" class="mb-2" inline>
+          <v-radio label="Paciente" value="patient" />
+          <v-radio label="Profesional" value="professional" />
+        </v-radio-group>
+
+        <v-text-field v-model="form.first_name" label="Nombres" variant="outlined" />
+        <v-text-field v-model="form.last_name" label="Apellidos" variant="outlined" />
+        <v-text-field v-model="form.email" label="Email" type="email" variant="outlined" />
+        <v-text-field v-model="form.password" label="Contrasena" type="password" variant="outlined" />
+        <v-text-field v-model="form.national_id" label="Cedula" variant="outlined" />
+        <v-text-field v-model="form.phone" label="Telefono" variant="outlined" />
 
         <v-btn :loading="isSubmitting" block color="primary" size="large" type="submit">
-          {{ accountRole === 'patient' ? 'Registrar paciente' : 'Registrar profesional' }}
+          Crear cuenta
         </v-btn>
       </v-form>
     </v-card-text>
 
     <v-card-actions class="px-6 pb-6">
-      <span class="text-body-2 text-medium-emphasis">Ya tienes cuenta?</span>
+      <span class="text-body-2 text-medium-emphasis">Ya existe una cuenta?</span>
       <v-spacer />
       <v-btn to="/login" variant="text">Ir a login</v-btn>
     </v-card-actions>

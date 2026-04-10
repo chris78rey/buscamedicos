@@ -12,7 +12,7 @@ definePageMeta({
 const route = useRoute()
 const authStore = useAuthStore()
 const { apiFetch } = useApi()
-const { resolveRoleHome } = useAuth()
+const { resolveRoleHome, syncAccessToken } = useAuth()
 
 const form = reactive<LoginPayload>({
   email: '',
@@ -44,7 +44,9 @@ async function handleSubmit() {
       body: validation.data,
     })
 
+    syncAccessToken(response.access_token)
     authStore.setToken(response.access_token)
+
     const user = await authStore.fetchMe()
     const requestedRedirect = typeof route.query.redirect === 'string' ? route.query.redirect : ''
     const target = requestedRedirect.startsWith('/')

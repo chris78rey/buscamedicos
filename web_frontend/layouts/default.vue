@@ -1,6 +1,6 @@
 <script setup lang="ts">
 const authStore = useAuthStore()
-const { bootstrapAuth, resolveRoleHome } = useAuth()
+const { bootstrapAuth, resolveRoleHome, syncAccessToken } = useAuth()
 
 await bootstrapAuth()
 
@@ -16,6 +16,7 @@ const primaryLink = computed(() => {
 })
 
 async function handleLogout() {
+  syncAccessToken(null)
   authStore.logout()
   await navigateTo('/login')
 }

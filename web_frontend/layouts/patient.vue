@@ -1,5 +1,6 @@
 <script setup lang="ts">
 const authStore = useAuthStore()
+const { syncAccessToken } = useAuth()
 
 const links = [
   { title: 'Dashboard', to: '/patient/dashboard', icon: 'mdi-view-dashboard' },
@@ -10,6 +11,7 @@ const links = [
 ]
 
 async function handleLogout() {
+  syncAccessToken(null)
   authStore.logout()
   await navigateTo('/login')
 }

@@ -26,31 +26,69 @@ async def get_current_user(
     return user
 
 def require_role(allowed_roles: List[str]):
-    async def role_checker(current_user: User = Depends(get_current_user)):
-        await current_user.awaitable_attrs.roles
-        # Check user roles
-        has_role = any(role.code in allowed_roles for role in current_user.roles)
+    async def role_checker(
+        current_user: User = Depends(get_current_user),
+        db: AsyncSession = Depends(get_db)
+    ):
+        from sqlalchemy import select
+        from app.models.role import Role, UserRole, UserRoleStatus
+        result = await db.execute(
+            select(Role)
+            .join(UserRole, UserRole.role_id == Role.id)
+            .where(
+                UserRole.user_id == current_user.id,
+                UserRole.status == UserRoleStatus.ACTIVE
+            )
+        )
+        roles = result.scalars().all()
+        has_role = any(role.code in allowed_roles for role in roles)
         if not has_role:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Insufficient permissions")
         return current_user
     return role_checker
 
 def require_owner_or_role(resource_owner_id: str, allowed_roles: List[str]):
-    async def owner_checker(current_user: User = Depends(get_current_user)):
+    async def owner_checker(
+        current_user: User = Depends(get_current_user),
+        db: AsyncSession = Depends(get_db)
+    ):
         if str(current_user.id) == resource_owner_id:
             return current_user
-        await current_user.awaitable_attrs.roles
-        has_role = any(role.code in allowed_roles for role in current_user.roles)
+        from sqlalchemy import select
+        from app.models.role import Role, UserRole, UserRoleStatus
+        result = await db.execute(
+            select(Role)
+            .join(UserRole, UserRole.role_id == Role.id)
+            .where(
+                UserRole.user_id == current_user.id,
+                UserRole.status == UserRoleStatus.ACTIVE
+            )
+        )
+        roles = result.scalars().all()
+        has_role = any(role.code in allowed_roles for role in roles)
         if not has_role:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Insufficient permissions")
         return current_user
     return owner_checker
 
 def require_non_clinical_admin_scope():
-    async def admin_checker(current_user: User = Depends(get_current_user)):
-        await current_user.awaitable_attrs.roles
+    async def admin_checker(
+        current_user: User = Depends(get_current_user),
+        db: AsyncSession = Depends(get_db)
+    ):
+        from sqlalchemy import select
+        from app.models.role import Role, UserRole, UserRoleStatus
+        result = await db.execute(
+            select(Role)
+            .join(UserRole, UserRole.role_id == Role.id)
+            .where(
+                UserRole.user_id == current_user.id,
+                UserRole.status == UserRoleStatus.ACTIVE
+            )
+        )
+        roles = result.scalars().all()
         admin_roles = ["super_admin", "admin_validation", "admin_support"]
-        has_admin = any(role.code in admin_roles for role in current_user.roles)
+        has_admin = any(role.code in admin_roles for role in roles)
         if has_admin:
             # Admin cannot access clinical data - future enforcement
             pass

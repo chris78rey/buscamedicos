@@ -1,17 +1,20 @@
 import json
 import uuid
 from datetime import datetime, time
+from hashlib import sha256
 from typing import Any, Dict, List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import BaseModel, Field
+from fastapi import APIRouter, Depends, File as FastAPIFile, Form, HTTPException, UploadFile, status
+from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
 from app.core.dependencies import get_current_user
 from app.models.audit import AuditEvent, Severity
-from app.models.professional import Professional
+from app.models.file import File as StoredFile
+from app.models.professional import OnboardingStatus, Professional, ProfessionalStatus
+from app.models.professional_document import DocumentType, ProfessionalDocument, ReviewStatus
 from app.models.step2_models import (
     Appointment,
     ProfessionalAvailability,
@@ -22,6 +25,13 @@ from app.models.step2_models import (
     ServiceModality,
 )
 from app.models.user import User
+from app.models.verification import (
+    VerificationEvent,
+    VerificationEventType,
+    VerificationRequest,
+    VerificationRequestStatus,
+)
+from app.services.file_storage_service import FileStorageService
 
 router = APIRouter()
 
@@ -54,6 +64,49 @@ class TimeBlockPayload(BaseModel):
     ends_at: datetime
     reason: Optional[str] = Field(default=None, max_length=300)
     block_type: str = Field(default="manual_block", min_length=2, max_length=80)
+
+
+class ProfessionalUpdatePayload(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    public_display_name: Optional[str] = Field(default=None, max_length=255)
+    professional_type: Optional[str] = Field(default=None, max_length=255)
+    bio_public: Optional[str] = Field(default=None, max_length=5000)
+    years_experience: Optional[int] = Field(default=None, ge=0, le=80)
+    languages: Optional[List[str]] = Field(default=None)
+    public_slug: Optional[str] = Field(default=None, max_length=255)
+
+
+class DocumentUploadResponse(BaseModel):
+    id: str
+    document_type: str
+    file_id: str
+    original_filename: str
+    mime_type: str
+    sha256: str
+    review_status: str
+    uploaded_at: datetime
+    download_url: str
+
+
+class DocumentResponse(BaseModel):
+    id: str
+    professional_id: str
+    document_type: str
+    file_id: str
+    original_filename: str
+    mime_type: str
+    sha256: str
+    review_status: str
+    review_notes: Optional[str]
+    uploaded_at: datetime
+    download_url: str
+
+
+class SubmitVerificationResponse(BaseModel):
+    id: str
+    status: str
+    submitted_at: datetime
 
 
 def _normalize_hms(value: str) -> str:
@@ -97,11 +150,17 @@ def _serialize_json(value: Any) -> Optional[str]:
 
 async def _get_professional_or_404(db: AsyncSession, user_id: str) -> Professional:
     result = await db.execute(
-        select(Professional).where(Professional.user_id == user_id)
+        select(Professional).where(
+            Professional.user_id == user_id,
+            Professional.deleted_at.is_(None)
+        )
     )
     professional = result.scalar_one_or_none()
     if not professional:
-        raise HTTPException(status_code=404, detail="Professional not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Su cuenta no tiene un perfil profesional asociado o el perfil fue eliminado."
+        )
     return professional
 
 
@@ -119,11 +178,11 @@ async def _log_professional_audit(
         actor_user_id=str(current_user.id),
         actor_role_code="professional",
         action=action,
-        resource_type=resource_type,
-        resource_id=resource_id,
+        entity_type=resource_type,
+        entity_id=resource_id,
         severity=Severity.INFO,
-        metadata_json=_serialize_json(metadata),
-        details_json=_serialize_json(details),
+        before_json=_serialize_json(metadata),
+        after_json=_serialize_json(details),
         created_at=datetime.utcnow(),
     )
     db.add(event)
@@ -201,7 +260,6 @@ async def _validate_availability_payload(
         select(ProfessionalAvailability).where(
             ProfessionalAvailability.professional_id == professional_id,
             ProfessionalAvailability.weekday == payload.weekday,
-            ProfessionalAvailability.modality_code == payload.modality_code,
             ProfessionalAvailability.deleted_at.is_(None),
         )
     )
@@ -216,14 +274,47 @@ async def _validate_availability_payload(
 
         if _ranges_overlap(start_parsed, end_parsed, row_start, row_end):
             raise HTTPException(
-                status_code=409,
-                detail="Availability overlaps with another active availability for the same weekday and modality",
+                status_code=status.HTTP_409_CONFLICT,
+                detail=f"Cruce de horario detectado con otra disponibilidad ({row.start_time} - {row.end_time}, modalidad: {row.modality_code})",
             )
 
     return {
         "start_time": start_time_normalized,
         "end_time": end_time_normalized,
     }
+
+
+async def _validate_time_block_payload(
+    db: AsyncSession,
+    professional_id: str,
+    payload: TimeBlockPayload,
+    exclude_id: Optional[str] = None,
+) -> None:
+    if payload.starts_at >= payload.ends_at:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="La fecha/hora de inicio debe ser anterior a la de fin."
+        )
+
+    # Check for overlaps with other time blocks
+    existing_result = await db.execute(
+        select(ProfessionalTimeBlock).where(
+            ProfessionalTimeBlock.professional_id == professional_id,
+            ProfessionalTimeBlock.deleted_at.is_(None),
+            ProfessionalTimeBlock.ends_at > payload.starts_at,
+            ProfessionalTimeBlock.starts_at < payload.ends_at,
+        )
+    )
+    existing_rows = existing_result.scalars().all()
+
+    for row in existing_rows:
+        if exclude_id and str(row.id) == str(exclude_id):
+            continue
+        
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"Ya existe un bloqueo en este rango ({row.starts_at} a {row.ends_at})."
+        )
 
 
 def _serialize_profile(professional: Professional, profile: Optional[ProfessionalPublicProfile]) -> Dict[str, Any]:
@@ -289,6 +380,465 @@ def _serialize_time_block(item: ProfessionalTimeBlock) -> Dict[str, Any]:
         "block_type": item.block_type,
         "created_at": item.created_at.isoformat() if item.created_at else None,
         "updated_at": item.updated_at.isoformat() if item.updated_at else None,
+    }
+
+
+def _download_url(file_id: str) -> str:
+    return f"/api/v1/files/{file_id}/download"
+
+
+def _serialize_professional_self(professional: Professional) -> Dict[str, Any]:
+    languages = []
+    if professional.languages_json:
+        try:
+            languages = json.loads(professional.languages_json)
+        except:
+            languages = []
+            
+    return {
+        "id": str(professional.id),
+        "user_id": str(professional.user_id),
+        "person_id": str(professional.person_id),
+        "public_display_name": professional.public_display_name,
+        "professional_type": professional.professional_type,
+        "bio_public": professional.bio_public,
+        "years_experience": int(professional.years_experience) if professional.years_experience and professional.years_experience.isdigit() else 0,
+        "languages": languages,
+        "public_slug": professional.public_slug,
+        "onboarding_status": professional.onboarding_status.value if professional.onboarding_status else None,
+        "status": professional.status.value if professional.status else None,
+        "is_public_profile_enabled": bool(professional.is_public_profile_enabled),
+        "created_at": professional.created_at,
+        "updated_at": professional.updated_at,
+    }
+
+
+def _serialize_document(item: ProfessionalDocument) -> Dict[str, Any]:
+    return {
+        "id": str(item.id),
+        "professional_id": str(item.professional_id),
+        "document_type": item.document_type.value if item.document_type else None,
+        "file_id": str(item.file_id),
+        "original_filename": item.original_filename,
+        "mime_type": item.mime_type,
+        "sha256": item.sha256,
+        "review_status": item.review_status.value if item.review_status else None,
+        "review_notes": item.review_notes,
+        "uploaded_at": item.uploaded_at,
+        "download_url": _download_url(str(item.file_id)),
+    }
+
+
+async def _get_document_or_404(
+    db: AsyncSession,
+    professional_id: str,
+    document_id: str,
+) -> ProfessionalDocument:
+    result = await db.execute(
+        select(ProfessionalDocument).where(
+            ProfessionalDocument.id == document_id,
+            ProfessionalDocument.professional_id == professional_id,
+            ProfessionalDocument.deleted_at.is_(None),
+        )
+    )
+    document = result.scalar_one_or_none()
+    if not document:
+        raise HTTPException(status_code=404, detail="Document not found")
+    return document
+
+
+async def _get_file_for_document(
+    db: AsyncSession,
+    *,
+    file_id: str,
+) -> Optional[StoredFile]:
+    result = await db.execute(
+        select(StoredFile).where(
+            StoredFile.id == file_id,
+        )
+    )
+    return result.scalar_one_or_none()
+
+
+async def _soft_delete_document_and_file(
+    *,
+    db: AsyncSession,
+    file_storage: FileStorageService,
+    document: ProfessionalDocument,
+    current_user: User,
+    file_record: Optional[StoredFile] = None,
+) -> Optional[StoredFile]:
+    now = datetime.utcnow()
+    document.deleted_at = now
+    document.deleted_by = str(current_user.id)
+    document.updated_at = now
+
+    resolved_file = file_record or await _get_file_for_document(
+        db,
+        file_id=str(document.file_id),
+    )
+
+    if resolved_file and not resolved_file.deleted_at:
+        resolved_file.deleted_at = now
+        resolved_file.deleted_by = str(current_user.id)
+        resolved_file.relative_path = file_storage.soft_delete_file(resolved_file.relative_path)
+
+    return resolved_file
+
+
+async def _create_professional_document(
+    *,
+    db: AsyncSession,
+    professional: Professional,
+    current_user: User,
+    document_type: DocumentType,
+    upload: UploadFile,
+) -> ProfessionalDocument:
+    storage = FileStorageService()
+    force_pdf = (document_type == DocumentType.DEGREE)
+    
+    file_record, content = await storage.save_professional_document(
+        upload=upload,
+        professional_id=str(professional.id),
+        document_type=document_type.value,
+        owner_user_id=str(current_user.id),
+        force_pdf=force_pdf,
+    )
+
+    db.add(file_record)
+    await db.flush()
+
+    existing_result = await db.execute(
+        select(ProfessionalDocument).where(
+            ProfessionalDocument.professional_id == professional.id,
+            ProfessionalDocument.document_type == document_type,
+            ProfessionalDocument.deleted_at.is_(None),
+        )
+    )
+    existing_document = existing_result.scalar_one_or_none()
+    if existing_document:
+        existing_file = await _get_file_for_document(
+            db,
+            file_id=str(existing_document.file_id),
+        )
+        await _soft_delete_document_and_file(
+            db=db,
+            file_storage=storage,
+            document=existing_document,
+            current_user=current_user,
+            file_record=existing_file,
+        )
+
+    document = ProfessionalDocument(
+        professional_id=professional.id,
+        document_type=document_type,
+        file_id=file_record.id,
+        original_filename=file_record.original_filename,
+        mime_type=file_record.mime_type,
+        sha256=file_record.sha256,
+        uploaded_at=datetime.utcnow(),
+        review_status=ReviewStatus.PENDING,
+        created_by=str(current_user.id),
+        updated_by=str(current_user.id),
+    )
+    db.add(document)
+    await db.flush()
+    return document
+
+
+@router.get("/me")
+async def get_my_professional_profile(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    professional = await _get_professional_or_404(db, str(current_user.id))
+    return _serialize_professional_self(professional)
+
+
+@router.patch("/me")
+async def update_my_professional_profile(
+    data: ProfessionalUpdatePayload,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    professional = await _get_professional_or_404(db, str(current_user.id))
+    before = _serialize_professional_self(professional)
+
+    payload = data.model_dump(exclude_unset=True)
+    if not payload:
+        raise HTTPException(status_code=400, detail="At least one field must be provided")
+
+    if "public_slug" in payload and payload["public_slug"]:
+        slug_result = await db.execute(
+            select(Professional).where(
+                Professional.public_slug == payload["public_slug"],
+                Professional.id != professional.id,
+                Professional.deleted_at.is_(None),
+            )
+        )
+        if slug_result.scalar_one_or_none():
+            raise HTTPException(status_code=409, detail="public_slug is already in use")
+
+    if "languages" in payload:
+        professional.languages_json = json.dumps(payload.pop("languages"))
+    
+    if "years_experience" in payload:
+        professional.years_experience = str(payload.pop("years_experience"))
+
+    for key, value in payload.items():
+        setattr(professional, key, value)
+
+    professional.updated_at = datetime.utcnow()
+    professional.updated_by = str(current_user.id)
+
+    await _log_professional_audit(
+        db=db,
+        current_user=current_user,
+        action="professional_profile_updated",
+        resource_type="professional",
+        resource_id=str(professional.id),
+        metadata=before,
+        details=_serialize_professional_self(professional),
+    )
+
+    await db.commit()
+    await db.refresh(professional)
+    return _serialize_professional_self(professional)
+
+
+@router.post("/me/documents", response_model=DocumentUploadResponse, status_code=status.HTTP_201_CREATED)
+async def upload_my_document(
+    document_type: DocumentType = Form(...),
+    file: UploadFile = FastAPIFile(...),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    professional = await _get_professional_or_404(db, str(current_user.id))
+
+    try:
+        document = await _create_professional_document(
+            db=db,
+            professional=professional,
+            current_user=current_user,
+            document_type=document_type,
+            upload=file,
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    await _log_professional_audit(
+        db=db,
+        current_user=current_user,
+        action="professional_document_uploaded",
+        resource_type="professional_document",
+        resource_id=str(document.id),
+        metadata={
+            "professional_id": str(professional.id),
+            "document_type": document.document_type.value,
+        },
+        details=_serialize_document(document),
+    )
+
+    await db.commit()
+    await db.refresh(document)
+
+    document_data = _serialize_document(document)
+    return DocumentUploadResponse(
+        id=document_data["id"],
+        document_type=document_data["document_type"],
+        file_id=document_data["file_id"],
+        original_filename=document_data["original_filename"],
+        mime_type=document_data["mime_type"],
+        sha256=document_data["sha256"],
+        review_status=document_data["review_status"],
+        uploaded_at=document_data["uploaded_at"],
+        download_url=document_data["download_url"],
+    )
+
+
+@router.get("/me/documents", response_model=List[DocumentResponse])
+async def list_my_documents(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    professional = await _get_professional_or_404(db, str(current_user.id))
+
+    result = await db.execute(
+        select(ProfessionalDocument)
+        .where(
+            ProfessionalDocument.professional_id == professional.id,
+            ProfessionalDocument.deleted_at.is_(None),
+        )
+        .order_by(ProfessionalDocument.uploaded_at.desc())
+    )
+    documents = result.scalars().all()
+    return [DocumentResponse(**_serialize_document(document)) for document in documents]
+
+
+@router.delete("/me/documents/{doc_id}")
+async def delete_my_document(
+    doc_id: str,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    professional = await _get_professional_or_404(db, str(current_user.id))
+    document = await _get_document_or_404(db, str(professional.id), doc_id)
+
+    storage = FileStorageService()
+    file_record = await _soft_delete_document_and_file(
+        db=db,
+        file_storage=storage,
+        document=document,
+        current_user=current_user,
+    )
+
+    await _log_professional_audit(
+        db=db,
+        current_user=current_user,
+        action="professional_document_deleted",
+        resource_type="professional_document",
+        resource_id=str(document.id),
+        metadata={
+            "professional_id": str(professional.id),
+            "file_id": str(document.file_id),
+            "file_deleted": bool(file_record),
+        },
+        details={"deleted_at": document.deleted_at.isoformat() if document.deleted_at else None},
+    )
+
+    await db.commit()
+    return {"status": "deleted", "id": doc_id}
+
+
+@router.post("/me/submit-verification", response_model=SubmitVerificationResponse, status_code=status.HTTP_201_CREATED)
+async def submit_my_verification(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    professional = await _get_professional_or_404(db, str(current_user.id))
+
+    degree_result = await db.execute(
+        select(ProfessionalDocument).where(
+            ProfessionalDocument.professional_id == professional.id,
+            ProfessionalDocument.document_type == DocumentType.DEGREE,
+            ProfessionalDocument.deleted_at.is_(None),
+        )
+    )
+    degree_document = degree_result.scalar_one_or_none()
+    if not degree_document:
+        raise HTTPException(status_code=400, detail="A degree document is required before submitting verification")
+
+    if not (professional.public_display_name or "").strip():
+        raise HTTPException(status_code=400, detail="public_display_name is required before submitting verification")
+
+    if not (professional.professional_type or "").strip():
+        raise HTTPException(status_code=400, detail="professional_type is required before submitting verification")
+
+    existing_request_result = await db.execute(
+        select(VerificationRequest).where(
+            VerificationRequest.professional_id == professional.id,
+            VerificationRequest.status.in_(
+                [VerificationRequestStatus.SUBMITTED, VerificationRequestStatus.UNDER_REVIEW]
+            ),
+            VerificationRequest.deleted_at.is_(None),
+        )
+    )
+    existing_request = existing_request_result.scalar_one_or_none()
+    if existing_request:
+        raise HTTPException(status_code=409, detail="There is already an active verification request")
+
+    now = datetime.utcnow()
+    verification_request = VerificationRequest(
+        professional_id=professional.id,
+        submitted_at=now,
+        status=VerificationRequestStatus.SUBMITTED,
+        created_at=now,
+        updated_at=now,
+        created_by=str(current_user.id),
+        updated_by=str(current_user.id),
+    )
+    db.add(verification_request)
+    await db.flush()
+
+    verification_event = VerificationEvent(
+        verification_request_id=verification_request.id,
+        event_type=VerificationEventType.SUBMITTED,
+        event_payload_json=_serialize_json(
+            {
+                "professional_id": str(professional.id),
+                "document_id": str(degree_document.id),
+                "submitted_at": now.isoformat(),
+            }
+        ),
+        created_at=now,
+        created_by=str(current_user.id),
+    )
+    db.add(verification_event)
+
+    professional.onboarding_status = OnboardingStatus.SUBMITTED
+    professional.status = ProfessionalStatus.PENDING_REVIEW
+    professional.is_public_profile_enabled = False
+    professional.updated_at = now
+    professional.updated_by = str(current_user.id)
+
+    await _log_professional_audit(
+        db=db,
+        current_user=current_user,
+        action="professional_verification_submitted",
+        resource_type="verification_request",
+        resource_id=str(verification_request.id),
+        metadata={"professional_id": str(professional.id)},
+        details={
+            "status": verification_request.status.value,
+            "onboarding_status": professional.onboarding_status.value,
+            "professional_status": professional.status.value,
+        },
+    )
+
+    await db.commit()
+    await db.refresh(verification_request)
+    return SubmitVerificationResponse(
+        id=str(verification_request.id),
+        status=verification_request.status.value,
+        submitted_at=verification_request.submitted_at,
+    )
+
+
+@router.get("/me/verification-status")
+async def get_my_verification_status(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    professional = await _get_professional_or_404(db, str(current_user.id))
+
+    # Get active verification request
+    result = await db.execute(
+        select(VerificationRequest)
+        .where(
+            VerificationRequest.professional_id == professional.id,
+            VerificationRequest.deleted_at.is_(None),
+        )
+        .order_by(VerificationRequest.submitted_at.desc())
+    )
+    request = result.scalars().first()
+
+    # Get documents
+    docs_result = await db.execute(
+        select(ProfessionalDocument)
+        .where(
+            ProfessionalDocument.professional_id == professional.id,
+            ProfessionalDocument.deleted_at.is_(None),
+        )
+    )
+    documents = docs_result.scalars().all()
+
+    return {
+        "professional_status": professional.status.value if professional.status else None,
+        "onboarding_status": professional.onboarding_status.value if professional.onboarding_status else None,
+        "request_status": request.status.value if request else None,
+        "submitted_at": request.submitted_at if request else None,
+        "decision_reason": request.decision_reason if request else None,
+        "documents": [_serialize_document(doc) for doc in documents],
     }
 
 
@@ -617,9 +1167,7 @@ async def create_time_block(
     db: AsyncSession = Depends(get_db),
 ):
     professional = await _get_professional_or_404(db, str(current_user.id))
-
-    if data.starts_at >= data.ends_at:
-        raise HTTPException(status_code=400, detail="starts_at must be earlier than ends_at")
+    await _validate_time_block_payload(db, str(professional.id), data)
 
     item = ProfessionalTimeBlock(
         professional_id=professional.id,
@@ -669,8 +1217,7 @@ async def update_time_block(
     if not item:
         raise HTTPException(status_code=404, detail="Time block not found")
 
-    if data.starts_at >= data.ends_at:
-        raise HTTPException(status_code=400, detail="starts_at must be earlier than ends_at")
+    await _validate_time_block_payload(db, str(professional.id), data, exclude_id=block_id)
 
     item.starts_at = data.starts_at
     item.ends_at = data.ends_at

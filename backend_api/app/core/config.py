@@ -1,5 +1,5 @@
 from pydantic_settings import BaseSettings
-from typing import Optional
+from typing import Optional, List
 
 class Settings(BaseSettings):
     APP_ENV: str = "development"
@@ -14,8 +14,15 @@ class Settings(BaseSettings):
     
     REDIS_URL: Optional[str] = None
     
-    FILES_PATH: str = "./files"
+    FILES_PATH: str = "/app/files"
     MAX_FILE_SIZE_MB: int = 10
+    
+    ALLOWED_EXTENSIONS: List[str] = [".pdf", ".jpg", ".jpeg", ".png"]
+    ALLOWED_MIME_TYPES: List[str] = [
+        "application/pdf",
+        "image/jpeg",
+        "image/png",
+    ]
     
     class Config:
         env_file = ".env"

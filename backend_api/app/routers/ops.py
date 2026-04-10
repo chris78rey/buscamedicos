@@ -171,15 +171,15 @@ async def register_release(
 
     audit = AuditEvent(
         id=str(uuid.uuid4()),
-        user_id=str(current_user.id),
+        actor_user_id=str(current_user.id),
         action="release.register",
-        resource_type="deployment_release",
-        resource_id=release.id,
+        entity_type="deployment_release",
+        entity_id=release.id,
         ip_address=None,
         user_agent=None,
         request_id=None,
-        details_json=json.dumps({"release_code": data.release_code, "image_tag": data.image_tag}),
-        severity="medium",
+        after_json=json.dumps({"release_code": data.release_code, "image_tag": data.image_tag}),
+        severity=Severity.INFO,
         operational_scope=True,
         release_code=data.release_code,
     )
@@ -215,15 +215,15 @@ async def mark_rollback(
 
     audit = AuditEvent(
         id=str(uuid.uuid4()),
-        user_id=str(current_user.id),
+        actor_user_id=str(current_user.id),
         action="release.mark_rollback",
-        resource_type="deployment_release",
-        resource_id=release.id,
+        entity_type="deployment_release",
+        entity_id=release.id,
         ip_address=None,
         user_agent=None,
         request_id=None,
-        details_json=json.dumps({"release_code": release.release_code}),
-        severity="medium",
+        after_json=json.dumps({"release_code": release.release_code}),
+        severity=Severity.INFO,
         operational_scope=True,
         release_code=release.release_code,
     )
@@ -283,15 +283,15 @@ async def run_job(
 
     audit = AuditEvent(
         id=str(uuid.uuid4()),
-        user_id=str(current_user.id),
+        actor_user_id=str(current_user.id),
         action="job.run_manual",
-        resource_type="operational_job",
-        resource_id=job.id,
+        entity_type="operational_job",
+        entity_id=job.id,
         ip_address=None,
         user_agent=None,
         request_id=None,
-        details_json=json.dumps({"job_code": job_code}),
-        severity="medium",
+        after_json=json.dumps({"job_code": job_code}),
+        severity=Severity.INFO,
         operational_scope=True,
     )
     db.add(audit)
@@ -402,15 +402,15 @@ async def run_db_backup(
 
     audit = AuditEvent(
         id=str(uuid.uuid4()),
-        user_id=str(current_user.id),
+        actor_user_id=str(current_user.id),
         action="backup.db.start",
-        resource_type="backup_artifact",
-        resource_id=backup_id,
+        entity_type="backup_artifact",
+        entity_id=backup_id,
         ip_address=None,
         user_agent=None,
         request_id=None,
-        details_json=json.dumps({"backup_type": BackupType.POSTGRES_DUMP}),
-        severity="medium",
+        after_json=json.dumps({"backup_type": BackupType.POSTGRES_DUMP}),
+        severity=Severity.INFO,
         operational_scope=True,
     )
     db.add(audit)
@@ -437,7 +437,7 @@ async def run_db_backup(
     artifact.status = BackupStatus.SUCCESS
 
     audit.action = "backup.db.complete"
-    audit.details_json = json.dumps({"backup_type": BackupType.POSTGRES_DUMP, "size_bytes": len(data), "hash": artifact.artifact_hash})
+    audit.after_json = json.dumps({"backup_type": BackupType.POSTGRES_DUMP, "size_bytes": len(data), "hash": artifact.artifact_hash})
     await db.commit()
     await db.refresh(artifact)
     return BackupRunResponse(backup_artifact_id=artifact.id, status=artifact.status, started_at=started_at)
@@ -462,15 +462,15 @@ async def run_files_backup(
 
     audit = AuditEvent(
         id=str(uuid.uuid4()),
-        user_id=str(current_user.id),
+        actor_user_id=str(current_user.id),
         action="backup.files.start",
-        resource_type="backup_artifact",
-        resource_id=backup_id,
+        entity_type="backup_artifact",
+        entity_id=backup_id,
         ip_address=None,
         user_agent=None,
         request_id=None,
-        details_json=json.dumps({"backup_type": BackupType.FILES_ARCHIVE}),
-        severity="medium",
+        after_json=json.dumps({"backup_type": BackupType.FILES_ARCHIVE}),
+        severity=Severity.INFO,
         operational_scope=True,
     )
     db.add(audit)
@@ -553,15 +553,15 @@ async def run_restore_test(
 
     audit = AuditEvent(
         id=str(uuid.uuid4()),
-        user_id=str(current_user.id),
+        actor_user_id=str(current_user.id),
         action="restore_test.start",
-        resource_type="backup_artifact",
-        resource_id=latest.id,
+        entity_type="backup_artifact",
+        entity_id=latest.id,
         ip_address=None,
         user_agent=None,
         request_id=None,
-        details_json=json.dumps({"test_report_id": backup_id}),
-        severity="high",
+        after_json=json.dumps({"test_report_id": backup_id}),
+        severity=Severity.CRITICAL,
         operational_scope=True,
     )
     db.add(audit)

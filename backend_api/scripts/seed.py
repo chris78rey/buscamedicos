@@ -295,6 +295,109 @@ async def seed():
                     )
                 )
 
+        # Admin Validación para pruebas
+        existing_val_admin = await session.execute(
+            select(User).where(User.email == "admin_val@demo.com")
+        )
+        if not existing_val_admin.scalar_one_or_none():
+            val_admin_id = str(uuid.uuid4())
+            val_admin = User(
+                id=val_admin_id,
+                email="admin_val@demo.com",
+                password_hash=hash_password("Test1234!"),
+                is_email_verified=True,
+                status=UserStatus.ACTIVE,
+                created_by="seed",
+                updated_by="seed",
+            )
+            session.add(val_admin)
+            await session.flush()
+            
+            val_admin_person = Person(
+                id=str(uuid.uuid4()),
+                user_id=val_admin.id,
+                first_name="Admin",
+                last_name="Validacion",
+                national_id="1799999999",
+                phone="0999999998",
+                country="Ecuador",
+                created_by="seed",
+                updated_by="seed",
+            )
+            session.add(val_admin_person)
+            
+            val_role = await _get_role_by_code(session, "admin_validation")
+            if val_role:
+                session.add(
+                    UserRole(
+                        id=str(uuid.uuid4()),
+                        user_id=val_admin.id,
+                        role_id=val_role.id,
+                        assigned_by="seed",
+                        status=UserRoleStatus.ACTIVE,
+                    )
+                )
+
+        # Profesional para pruebas de validacion (en borrador)
+        existing_val_prof = await session.execute(
+            select(User).where(User.email == "prof_val@demo.com")
+        )
+        if not existing_val_prof.scalar_one_or_none():
+            val_prof_user_id = str(uuid.uuid4())
+            val_prof_user = User(
+                id=val_prof_user_id,
+                email="prof_val@demo.com",
+                password_hash=hash_password("Test1234!"),
+                is_email_verified=True,
+                status=UserStatus.ACTIVE,
+                created_by="seed",
+                updated_by="seed",
+            )
+            session.add(val_prof_user)
+            await session.flush()
+            
+            val_prof_person_id = str(uuid.uuid4())
+            val_prof_person = Person(
+                id=val_prof_person_id,
+                user_id=val_prof_user.id,
+                first_name="Doctor",
+                last_name="Pruebas",
+                national_id="1788888888",
+                phone="0988888888",
+                country="Ecuador",
+                created_by="seed",
+                updated_by="seed",
+            )
+            session.add(val_prof_person)
+            await session.flush()
+            
+            val_prof = Professional(
+                id=str(uuid.uuid4()),
+                user_id=val_prof_user.id,
+                person_id=val_prof_person_id,
+                public_slug="prof-pruebas",
+                professional_type="general",
+                public_display_name="Doctor Pruebas",
+                onboarding_status=OnboardingStatus.DRAFT,
+                status=ProfessionalStatus.DRAFT,
+                is_public_profile_enabled=False,
+                created_by="seed",
+                updated_by="seed",
+            )
+            session.add(val_prof)
+            
+            prof_role = await _get_role_by_code(session, "professional")
+            if prof_role:
+                session.add(
+                    UserRole(
+                        id=str(uuid.uuid4()),
+                        user_id=val_prof_user.id,
+                        role_id=prof_role.id,
+                        assigned_by="seed",
+                        status=UserRoleStatus.ACTIVE,
+                    )
+                )
+
         # demo dataset for UI (30 professionals, slots, and 10 patient appointments)
         specialty_catalog = [
             ("medicina_general", "Medicina General", "Atención primaria y prevención."),
@@ -387,18 +490,26 @@ async def seed():
                                 )
                             )
                     for modality in ["in_person_consultorio", "teleconsulta"]:
-                        price_amount = Decimal(25 + (i % 40))
-                        session.add(
-                            ProfessionalPrice(
-                                id=str(uuid.uuid4()),
-                                professional_id=prof.id,
-                                modality_code=modality,
-                                amount=price_amount,
-                                currency_code="USD",
-                                pricing_policy_id="policy_default_15",
-                                is_active=True,
+                        # Check if price already exists
+                        existing_price_result = await session.execute(
+                            select(ProfessionalPrice).where(
+                                ProfessionalPrice.professional_id == prof.id,
+                                ProfessionalPrice.modality_code == modality
                             )
                         )
+                        if not existing_price_result.scalar_one_or_none():
+                            price_amount = Decimal(25 + (i % 40))
+                            session.add(
+                                ProfessionalPrice(
+                                    id=str(uuid.uuid4()),
+                                    professional_id=prof.id,
+                                    modality_code=modality,
+                                    amount=price_amount,
+                                    currency_code="USD",
+                                    pricing_policy_id="policy_default_15",
+                                    is_active=True,
+                                )
+                            )
                 continue
 
             first_name = first_names[(i - 1) % len(first_names)]

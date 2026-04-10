@@ -41,11 +41,25 @@ export function useAuth() {
     return '/patient/dashboard'
   }
 
+  function syncAccessToken(token: string | null) {
+    const cookie = useCookie<string | null>('access_token')
+    cookie.value = token
+  }
+
   async function bootstrapAuth() {
     const authStore = useAuthStore()
+    const cookie = useCookie<string | null>('access_token')
+    const cookieToken = cookie.value ?? null
+
     if (!authStore.loaded) {
-      await authStore.bootstrap()
+      await authStore.bootstrap(cookieToken)
+      return authStore
     }
+
+    if (!authStore.token && cookieToken) {
+      authStore.setToken(cookieToken)
+    }
+
     return authStore
   }
 
@@ -55,5 +69,6 @@ export function useAuth() {
     getRoleCodes,
     isAdminRole,
     resolveRoleHome,
+    syncAccessToken,
   }
 }

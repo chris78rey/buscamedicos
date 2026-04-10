@@ -19,6 +19,12 @@ const cards = [
     icon: 'mdi-gavel',
   },
   {
+    title: 'Validación médica',
+    text: 'Revisa y aprueba solicitudes de profesionales.',
+    to: '/admin/validation/requests',
+    icon: 'mdi-card-account-details-star',
+  },
+  {
     title: 'Pagos',
     text: 'Revisa settlements y operaciones del marketplace.',
     to: '/admin/payments/settlements',

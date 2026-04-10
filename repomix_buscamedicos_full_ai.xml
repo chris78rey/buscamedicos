@@ -208,6 +208,7 @@ web_frontend/app.vue
 web_frontend/components/app/FeaturePlaceholder.vue
 web_frontend/composables/useApi.ts
 web_frontend/composables/useAuth.ts
+web_frontend/composables/useProfessionalAgenda.ts
 web_frontend/Dockerfile.dev
 web_frontend/layouts/admin.vue
 web_frontend/layouts/auth.vue
@@ -237,6 +238,7 @@ web_frontend/pages/patient/privacy/consents.vue
 web_frontend/pages/patient/professionals.vue
 web_frontend/pages/patient/professionals/[id].vue
 web_frontend/pages/privacy-auditor/access-logs.vue
+web_frontend/pages/professional/agenda.vue
 web_frontend/pages/professional/appointments.vue
 web_frontend/pages/professional/dashboard.vue
 web_frontend/pages/professional/earnings.vue
@@ -260,78 +262,6 @@ web_frontend/types/user.ts
 
 <files>
 This section contains the contents of the repository's files.
-
-<file path="infra/repomix_buscamedicos_full_ai.xml">
-This file is a merged representation of a subset of the codebase, containing specifically included files and files not matching ignore patterns, combined into a single document by Repomix.
-
-<file_summary>
-This section contains a summary of this file.
-
-<purpose>
-This file contains a packed representation of a subset of the repository's contents that is considered the most important context.
-It is designed to be easily consumable by AI systems for analysis, code review,
-or other automated processes.
-</purpose>
-
-<file_format>
-The content is organized as follows:
-1. This summary section
-2. Repository information
-3. Directory structure
-4. Repository files (if enabled)
-5. Multiple file entries, each consisting of:
-  - File path as an attribute
-  - Full contents of the file
-</file_format>
-
-<usage_guidelines>
-- This file should be treated as read-only. Any changes should be made to the
-  original repository files, not this packed version.
-- When processing this file, use the file path to distinguish
-  between different files in the repository.
-- Be aware that this file may contain sensitive information. Handle it with
-  the same level of security as you would the original repository.
-</usage_guidelines>
-
-<notes>
-- Some files may have been excluded based on .gitignore rules and Repomix's configuration
-- Binary files are not included in this packed representation. Please refer to the Repository Structure section for a complete list of file paths, including binary files
-- Only files matching these patterns are included: AGENTS.md, README.md, .opencode/skills/**, backend_api/**, web_frontend/**, infra/**, docs/**, pasos/**
-- Files matching these patterns are excluded: .git/**, node_modules/**, .nuxt/**, .output/**, .data/**, .nitro/**, .cache/**, dist/**, app_flutter/.dart_tool/**, app_flutter/build/**, **/__pycache__/**, **/.pytest_cache/**, **/.ruff_cache/**, **/*.sqlite, **/*.log, **/*.jpg, **/*.jpeg, **/*.png, **/*.webp, **/*.ico, **/*.pdf
-- Files matching patterns in .gitignore are excluded
-- Files matching default ignore patterns are excluded
-- Files are sorted by Git change count (files with more changes are at the bottom)
-</notes>
-
-</file_summary>
-
-<directory_structure>
-
-</directory_structure>
-
-<files>
-This section contains the contents of the repository's files.
-
-</files>
-</file>
-
-<file path="web_frontend/Dockerfile.dev">
-FROM node:20-alpine
-
-WORKDIR /app
-
-# Instalamos dependencias
-COPY package*.json ./
-RUN npm install
-
-# Copiamos el resto del código
-COPY . .
-
-EXPOSE 3000
-
-# Iniciamos Nuxt en modo desarrollo
-CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0", "--port", "3000"]
-</file>
 
 <file path=".opencode/skills/alembic-migrations/SKILL.md">
 ---
@@ -6905,15 +6835,15 @@ async def register_release(
 
     audit = AuditEvent(
         id=str(uuid.uuid4()),
-        user_id=str(current_user.id),
+        actor_user_id=str(current_user.id),
         action="release.register",
-        resource_type="deployment_release",
-        resource_id=release.id,
+        entity_type="deployment_release",
+        entity_id=release.id,
         ip_address=None,
         user_agent=None,
         request_id=None,
-        details_json=json.dumps({"release_code": data.release_code, "image_tag": data.image_tag}),
-        severity="medium",
+        after_json=json.dumps({"release_code": data.release_code, "image_tag": data.image_tag}),
+        severity=Severity.INFO,
         operational_scope=True,
         release_code=data.release_code,
     )
@@ -6949,15 +6879,15 @@ async def mark_rollback(
 
     audit = AuditEvent(
         id=str(uuid.uuid4()),
-        user_id=str(current_user.id),
+        actor_user_id=str(current_user.id),
         action="release.mark_rollback",
-        resource_type="deployment_release",
-        resource_id=release.id,
+        entity_type="deployment_release",
+        entity_id=release.id,
         ip_address=None,
         user_agent=None,
         request_id=None,
-        details_json=json.dumps({"release_code": release.release_code}),
-        severity="medium",
+        after_json=json.dumps({"release_code": release.release_code}),
+        severity=Severity.INFO,
         operational_scope=True,
         release_code=release.release_code,
     )
@@ -7017,15 +6947,15 @@ async def run_job(
 
     audit = AuditEvent(
         id=str(uuid.uuid4()),
-        user_id=str(current_user.id),
+        actor_user_id=str(current_user.id),
         action="job.run_manual",
-        resource_type="operational_job",
-        resource_id=job.id,
+        entity_type="operational_job",
+        entity_id=job.id,
         ip_address=None,
         user_agent=None,
         request_id=None,
-        details_json=json.dumps({"job_code": job_code}),
-        severity="medium",
+        after_json=json.dumps({"job_code": job_code}),
+        severity=Severity.INFO,
         operational_scope=True,
     )
     db.add(audit)
@@ -7136,15 +7066,15 @@ async def run_db_backup(
 
     audit = AuditEvent(
         id=str(uuid.uuid4()),
-        user_id=str(current_user.id),
+        actor_user_id=str(current_user.id),
         action="backup.db.start",
-        resource_type="backup_artifact",
-        resource_id=backup_id,
+        entity_type="backup_artifact",
+        entity_id=backup_id,
         ip_address=None,
         user_agent=None,
         request_id=None,
-        details_json=json.dumps({"backup_type": BackupType.POSTGRES_DUMP}),
-        severity="medium",
+        after_json=json.dumps({"backup_type": BackupType.POSTGRES_DUMP}),
+        severity=Severity.INFO,
         operational_scope=True,
     )
     db.add(audit)
@@ -7171,7 +7101,7 @@ async def run_db_backup(
     artifact.status = BackupStatus.SUCCESS
 
     audit.action = "backup.db.complete"
-    audit.details_json = json.dumps({"backup_type": BackupType.POSTGRES_DUMP, "size_bytes": len(data), "hash": artifact.artifact_hash})
+    audit.after_json = json.dumps({"backup_type": BackupType.POSTGRES_DUMP, "size_bytes": len(data), "hash": artifact.artifact_hash})
     await db.commit()
     await db.refresh(artifact)
     return BackupRunResponse(backup_artifact_id=artifact.id, status=artifact.status, started_at=started_at)
@@ -7196,15 +7126,15 @@ async def run_files_backup(
 
     audit = AuditEvent(
         id=str(uuid.uuid4()),
-        user_id=str(current_user.id),
+        actor_user_id=str(current_user.id),
         action="backup.files.start",
-        resource_type="backup_artifact",
-        resource_id=backup_id,
+        entity_type="backup_artifact",
+        entity_id=backup_id,
         ip_address=None,
         user_agent=None,
         request_id=None,
-        details_json=json.dumps({"backup_type": BackupType.FILES_ARCHIVE}),
-        severity="medium",
+        after_json=json.dumps({"backup_type": BackupType.FILES_ARCHIVE}),
+        severity=Severity.INFO,
         operational_scope=True,
     )
     db.add(audit)
@@ -7287,15 +7217,15 @@ async def run_restore_test(
 
     audit = AuditEvent(
         id=str(uuid.uuid4()),
-        user_id=str(current_user.id),
+        actor_user_id=str(current_user.id),
         action="restore_test.start",
-        resource_type="backup_artifact",
-        resource_id=latest.id,
+        entity_type="backup_artifact",
+        entity_id=latest.id,
         ip_address=None,
         user_agent=None,
         request_id=None,
-        details_json=json.dumps({"test_report_id": backup_id}),
-        severity="high",
+        after_json=json.dumps({"test_report_id": backup_id}),
+        severity=Severity.CRITICAL,
         operational_scope=True,
     )
     db.add(audit)
@@ -9304,309 +9234,6 @@ async def get_report_detail(
         assigned_admin_id=report.assigned_admin_id,
         resolved_at=report.resolved_at, resolution_summary=report.resolution_summary
     )
-</file>
-
-<file path="backend_api/app/routers/professional_self.py">
-from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
-from pydantic import BaseModel
-from typing import List, Optional
-from datetime import datetime
-from app.core.database import get_db
-from app.core.dependencies import get_current_user, require_role
-from app.models.user import User
-from app.models.professional import Professional, OnboardingStatus, ProfessionalStatus
-from app.models.step2_models import (
-    ProfessionalPublicProfile, ProfessionalAvailability, ProfessionalTimeBlock,
-    Appointment, ProfessionalSpecialty, ServiceModality, ProfessionalModality
-)
-from app.schemas.step2_schemas import (
-    PublicProfileUpdate, AvailabilityCreate, TimeBlockCreate
-)
-from app.services.step2_services import AppointmentService
-
-router = APIRouter()
-
-@router.get("/me/public-profile")
-async def get_my_public_profile(
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
-):
-    result = await db.execute(select(Professional).where(Professional.user_id == current_user.id))
-    prof = result.scalar_one_or_none()
-    if not prof:
-        raise HTTPException(status_code=404, detail="Professional not found")
-    
-    profile_result = await db.execute(
-        select(ProfessionalPublicProfile).where(ProfessionalPublicProfile.professional_id == prof.id)
-    )
-    profile = profile_result.scalar_one_or_none()
-    return profile or {}
-
-@router.put("/me/public-profile")
-async def update_my_public_profile(
-    data: PublicProfileUpdate,
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
-):
-    result = await db.execute(select(Professional).where(Professional.user_id == current_user.id))
-    prof = result.scalar_one_or_none()
-    if not prof:
-        raise HTTPException(status_code=404, detail="Professional not found")
-    
-    profile_result = await db.execute(
-        select(ProfessionalPublicProfile).where(ProfessionalPublicProfile.professional_id == prof.id)
-    )
-    profile = profile_result.scalar_one_or_none()
-    
-    if not profile:
-        profile = ProfessionalPublicProfile(professional_id=prof.id)
-        db.add(profile)
-    
-    for key, value in data.model_dump(exclude_unset=True).items():
-        if hasattr(profile, key) and key not in ["id", "professional_id"]:
-            setattr(profile, key, value)
-    
-    await db.commit()
-    return profile
-
-@router.get("/me/specialties")
-async def get_my_specialties(
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
-):
-    result = await db.execute(select(Professional).where(Professional.user_id == current_user.id))
-    prof = result.scalar_one_or_none()
-    if not prof:
-        raise HTTPException(status_code=404, detail="Professional not found")
-    
-    spec_result = await db.execute(
-        select(ProfessionalSpecialty).where(
-            ProfessionalSpecialty.professional_id == prof.id,
-            ProfessionalSpecialty.deleted_at.is_(None)
-        )
-    )
-    return spec_result.scalars().all()
-
-@router.get("/me/modalities")
-async def get_my_modalities(
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
-):
-    result = await db.execute(select(Professional).where(Professional.user_id == current_user.id))
-    prof = result.scalar_one_or_none()
-    if not prof:
-        raise HTTPException(status_code=404, detail="Professional not found")
-    
-    mod_result = await db.execute(
-        select(ProfessionalModality).where(
-            ProfessionalModality.professional_id == prof.id,
-            ProfessionalModality.deleted_at.is_(None)
-        )
-    )
-    return mod_result.scalars().all()
-
-@router.get("/me/availabilities")
-async def get_my_availabilities(
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
-):
-    result = await db.execute(select(Professional).where(Professional.user_id == current_user.id))
-    prof = result.scalar_one_or_none()
-    if not prof:
-        raise HTTPException(status_code=404, detail="Professional not found")
-    
-    avail_result = await db.execute(
-        select(ProfessionalAvailability).where(
-            ProfessionalAvailability.professional_id == prof.id,
-            ProfessionalAvailability.deleted_at.is_(None)
-        )
-    )
-    return avail_result.scalars().all()
-
-@router.post("/me/availabilities")
-async def create_availability(
-    data: AvailabilityCreate,
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
-):
-    result = await db.execute(select(Professional).where(Professional.user_id == current_user.id))
-    prof = result.scalar_one_or_none()
-    if not prof:
-        raise HTTPException(status_code=404, detail="Professional not found")
-    
-    avail = ProfessionalAvailability(
-        professional_id=prof.id,
-        weekday=data.weekday,
-        start_time=data.start_time,
-        end_time=data.end_time,
-        slot_minutes=data.slot_minutes,
-        modality_code=data.modality_code
-    )
-    db.add(avail)
-    await db.commit()
-    return avail
-
-@router.delete("/me/availabilities/{availability_id}")
-async def delete_availability(
-    availability_id: str,
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
-):
-    result = await db.execute(select(Professional).where(Professional.user_id == current_user.id))
-    prof = result.scalar_one_or_none()
-    if not prof:
-        raise HTTPException(status_code=404, detail="Professional not found")
-    
-    avail_result = await db.execute(
-        select(ProfessionalAvailability).where(
-            ProfessionalAvailability.id == availability_id,
-            ProfessionalAvailability.professional_id == prof.id
-        )
-    )
-    avail = avail_result.scalar_one_or_none()
-    if not avail:
-        raise HTTPException(status_code=404, detail="Availability not found")
-    
-    avail.deleted_at = datetime.utcnow()
-    await db.commit()
-    return {"status": "deleted"}
-
-@router.get("/me/time-blocks")
-async def get_my_time_blocks(
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
-):
-    result = await db.execute(select(Professional).where(Professional.user_id == current_user.id))
-    prof = result.scalar_one_or_none()
-    if not prof:
-        raise HTTPException(status_code=404, detail="Professional not found")
-    
-    blocks_result = await db.execute(
-        select(ProfessionalTimeBlock).where(
-            ProfessionalTimeBlock.professional_id == prof.id,
-            ProfessionalTimeBlock.deleted_at.is_(None)
-        )
-    )
-    return blocks_result.scalars().all()
-
-@router.post("/me/time-blocks")
-async def create_time_block(
-    data: TimeBlockCreate,
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
-):
-    result = await db.execute(select(Professional).where(Professional.user_id == current_user.id))
-    prof = result.scalar_one_or_none()
-    if not prof:
-        raise HTTPException(status_code=404, detail="Professional not found")
-    
-    block = ProfessionalTimeBlock(
-        professional_id=prof.id,
-        starts_at=data.starts_at,
-        ends_at=data.ends_at,
-        reason=data.reason,
-        block_type=data.block_type
-    )
-    db.add(block)
-    await db.commit()
-    return block
-
-@router.delete("/me/time-blocks/{block_id}")
-async def delete_time_block(
-    block_id: str,
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
-):
-    result = await db.execute(select(Professional).where(Professional.user_id == current_user.id))
-    prof = result.scalar_one_or_none()
-    if not prof:
-        raise HTTPException(status_code=404, detail="Professional not found")
-    
-    block_result = await db.execute(
-        select(ProfessionalTimeBlock).where(
-            ProfessionalTimeBlock.id == block_id,
-            ProfessionalTimeBlock.professional_id == prof.id
-        )
-    )
-    block = block_result.scalar_one_or_none()
-    if not block:
-        raise HTTPException(status_code=404, detail="Time block not found")
-    
-    block.deleted_at = datetime.utcnow()
-    await db.commit()
-    return {"status": "deleted"}
-
-@router.get("/me/appointments")
-async def get_my_appointments(
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
-):
-    result = await db.execute(select(Professional).where(Professional.user_id == current_user.id))
-    prof = result.scalar_one_or_none()
-    if not prof:
-        raise HTTPException(status_code=404, detail="Professional not found")
-    
-    apt_result = await db.execute(
-        select(Appointment).where(
-            Appointment.professional_id == prof.id,
-            Appointment.deleted_at.is_(None)
-        ).order_by(Appointment.scheduled_start.desc())
-    )
-    return apt_result.scalars().all()
-
-@router.post("/me/appointments/{appointment_id}/confirm")
-async def confirm_appointment(
-    appointment_id: str,
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
-):
-    result = await db.execute(select(Professional).where(Professional.user_id == current_user.id))
-    prof = result.scalar_one_or_none()
-    if not prof:
-        raise HTTPException(status_code=404, detail="Professional not found")
-    
-    try:
-        apt = await AppointmentService.transition_appointment(db, appointment_id, "confirmed", current_user.id)
-        return apt
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-
-@router.post("/me/appointments/{appointment_id}/cancel")
-async def cancel_appointment(
-    appointment_id: str,
-    reason: str = None,
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
-):
-    result = await db.execute(select(Professional).where(Professional.user_id == current_user.id))
-    prof = result.scalar_one_or_none()
-    if not prof:
-        raise HTTPException(status_code=404, detail="Professional not found")
-    
-    try:
-        apt = await AppointmentService.transition_appointment(db, appointment_id, "cancelled_by_professional", current_user.id, reason)
-        return apt
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-
-@router.post("/me/appointments/{appointment_id}/complete")
-async def complete_appointment(
-    appointment_id: str,
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
-):
-    result = await db.execute(select(Professional).where(Professional.user_id == current_user.id))
-    prof = result.scalar_one_or_none()
-    if not prof:
-        raise HTTPException(status_code=404, detail="Professional not found")
-    
-    try:
-        apt = await AppointmentService.transition_appointment(db, appointment_id, "completed", current_user.id)
-        return apt
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
 </file>
 
 <file path="backend_api/app/routers/professional_teleconsultation.py">
@@ -11647,12 +11274,12 @@ class ModerationAuditService:
         from app.models.audit import AuditEvent, Severity
         event = AuditEvent(
             id=str(uuid.uuid4()),
-            user_id=actor_user_id,
+            actor_user_id=actor_user_id,
             action=action,
-            resource_type=resource_type,
-            resource_id=resource_id,
+            entity_type=resource_type,
+            entity_id=resource_id,
             severity=Severity.INFO,
-            metadata_json=json.dumps(metadata) if metadata else None,
+            before_json=json.dumps(metadata) if metadata else None,
             ip_address=None,
             user_agent=None,
             created_at=datetime.utcnow()
@@ -12867,12 +12494,12 @@ class PatientConsentService:
     async def _audit_consent(self, patient_id: str, consent_type: str, action: str, user_id: str):
         event = AuditEvent(
             id=str(uuid.uuid4()),
-            user_id=user_id,
+            actor_user_id=user_id,
             action=action,
-            resource_type="patient_privacy_consent",
-            resource_id=patient_id,
+            entity_type="patient_privacy_consent",
+            entity_id=patient_id,
             severity=Severity.INFO,
-            metadata_json=json.dumps({"consent_type": consent_type}),
+            before_json=json.dumps({"consent_type": consent_type}),
             created_at=datetime.utcnow()
         )
         self.db.add(event)
@@ -13091,12 +12718,12 @@ class ExceptionalAccessRequestService:
     async def _audit_request(self, req: ExceptionalAccessRequest, action: str, user_id: str):
         event = AuditEvent(
             id=str(uuid.uuid4()),
-            user_id=user_id,
+            actor_user_id=user_id,
             action=action,
-            resource_type="exceptional_access_request",
-            resource_id=req.id,
+            entity_type="exceptional_access_request",
+            entity_id=req.id,
             severity=Severity.INFO,
-            metadata_json=json.dumps({
+            before_json=json.dumps({
                 "resource_type": req.resource_type,
                 "status": req.status,
                 "patient_id": req.patient_id
@@ -13108,12 +12735,12 @@ class ExceptionalAccessRequestService:
     async def _audit_grant(self, grant: ExceptionalAccessGrant, action: str, user_id: str, reason: str):
         event = AuditEvent(
             id=str(uuid.uuid4()),
-            user_id=user_id,
+            actor_user_id=user_id,
             action=action,
-            resource_type="exceptional_access_grant",
-            resource_id=grant.id,
+            entity_type="exceptional_access_grant",
+            entity_id=grant.id,
             severity=Severity.INFO,
-            metadata_json=json.dumps({
+            before_json=json.dumps({
                 "resource_type": grant.resource_type,
                 "reason": reason
             }),
@@ -16418,6 +16045,60 @@ networks:
     "per_user": 200
   }
 }
+</file>
+
+<file path="infra/repomix_buscamedicos_full_ai.xml">
+This file is a merged representation of a subset of the codebase, containing specifically included files and files not matching ignore patterns, combined into a single document by Repomix.
+
+<file_summary>
+This section contains a summary of this file.
+
+<purpose>
+This file contains a packed representation of a subset of the repository's contents that is considered the most important context.
+It is designed to be easily consumable by AI systems for analysis, code review,
+or other automated processes.
+</purpose>
+
+<file_format>
+The content is organized as follows:
+1. This summary section
+2. Repository information
+3. Directory structure
+4. Repository files (if enabled)
+5. Multiple file entries, each consisting of:
+  - File path as an attribute
+  - Full contents of the file
+</file_format>
+
+<usage_guidelines>
+- This file should be treated as read-only. Any changes should be made to the
+  original repository files, not this packed version.
+- When processing this file, use the file path to distinguish
+  between different files in the repository.
+- Be aware that this file may contain sensitive information. Handle it with
+  the same level of security as you would the original repository.
+</usage_guidelines>
+
+<notes>
+- Some files may have been excluded based on .gitignore rules and Repomix's configuration
+- Binary files are not included in this packed representation. Please refer to the Repository Structure section for a complete list of file paths, including binary files
+- Only files matching these patterns are included: AGENTS.md, README.md, .opencode/skills/**, backend_api/**, web_frontend/**, infra/**, docs/**, pasos/**
+- Files matching these patterns are excluded: .git/**, node_modules/**, .nuxt/**, .output/**, .data/**, .nitro/**, .cache/**, dist/**, app_flutter/.dart_tool/**, app_flutter/build/**, **/__pycache__/**, **/.pytest_cache/**, **/.ruff_cache/**, **/*.sqlite, **/*.log, **/*.jpg, **/*.jpeg, **/*.png, **/*.webp, **/*.ico, **/*.pdf
+- Files matching patterns in .gitignore are excluded
+- Files matching default ignore patterns are excluded
+- Files are sorted by Git change count (files with more changes are at the bottom)
+</notes>
+
+</file_summary>
+
+<directory_structure>
+
+</directory_structure>
+
+<files>
+This section contains the contents of the repository's files.
+
+</files>
 </file>
 
 <file path="infra/scripts/backup_db.sh">
@@ -38433,569 +38114,6 @@ defineProps<{
 </template>
 </file>
 
-<file path="web_frontend/composables/useApi.ts">
-import type {
-  AppointmentCreatePayload,
-  AppointmentCreatedResponse,
-  AppointmentSummary,
-  CheckoutResponse,
-  PaymentIntentResponse,
-  PaymentIntentConfirmResponse,
-  PaymentResponse,
-} from '~/types/appointment'
-import type {
-  ClinicalAccessLog,
-  ConsentCreatePayload,
-  ConsentResponse,
-  ExceptionalAccessRequestCreatePayload,
-  ExceptionalAccessRequestResponse,
-  PrivacyAuditorAccessLogsResponse,
-  PrivacyIncident,
-  PrivacyIncidentAssignPayload,
-  PrivacyIncidentCreatePayload,
-  PrivacyIncidentDismissPayload,
-  PrivacyIncidentResolvePayload,
-  PrivacyPolicyVersion,
-  PrivacyPolicyVersionCreatePayload,
-  ResourceAccessPolicy,
-  ResourceAccessPolicyUpdatePayload,
-  RetentionPolicy,
-  RetentionPolicyCreatePayload,
-} from '~/types/privacy'
-import type {
-  ProfessionalSearchFilters,
-  PublicProfessionalDetail,
-  PublicProfessionalListItem,
-  SlotItem,
-} from '~/types/professional'
-
-type ApiFetchOptions = {
-  method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
-  headers?: HeadersInit
-  body?: unknown
-}
-
-type AuditorLogFilters = {
-  actor_user_id?: string
-  patient_id?: string
-  resource_type?: string
-  from_date?: string
-  to_date?: string
-  limit?: number
-}
-
-type AdminPrivacyLogFilters = {
-  actor_user_id?: string
-  resource_type?: string
-  from_date?: string
-  to_date?: string
-}
-
-type AdminIncidentFilters = {
-  status_filter?: string
-  severity?: string
-}
-
-function normalizeHeaders(headers?: HeadersInit): Record<string, string> {
-  if (!headers) {
-    return {}
-  }
-
-  const resolvedHeaders = new Headers(headers)
-  return Object.fromEntries(resolvedHeaders.entries())
-}
-
-function cleanQuery(params: Record<string, unknown>) {
-  return Object.fromEntries(
-    Object.entries(params).filter(([, value]) => {
-      if (value === null || value === undefined) {
-        return false
-      }
-
-      if (typeof value === 'string') {
-        return value.trim().length > 0
-      }
-
-      return true
-    }),
-  )
-}
-
-function buildQueryString(params: Record<string, unknown>) {
-  const query = cleanQuery(params)
-  return new URLSearchParams(
-    Object.entries(query).reduce<Record<string, string>>((acc, [key, value]) => {
-      acc[key] = String(value)
-      return acc
-    }, {}),
-  ).toString()
-}
-
-export function useApi() {
-  const config = useRuntimeConfig()
-  const token = useCookie<string | null>('access_token')
-
-  async function apiFetch<T>(path: string, options: ApiFetchOptions = {}): Promise<T> {
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
-      ...normalizeHeaders(options.headers),
-    }
-
-    if (token.value) {
-      headers.Authorization = `Bearer ${token.value}`
-    }
-
-    return await $fetch<T>(`${config.public.apiBase}${path}`, {
-      method: options.method,
-      headers,
-      body: options.body,
-    })
-  }
-
-  async function searchProfessionals(
-    filters: ProfessionalSearchFilters = {},
-  ): Promise<PublicProfessionalListItem[]> {
-    const queryString = buildQueryString({
-      city: filters.city,
-      specialty: filters.specialty,
-      modality: filters.modality,
-      available_date: filters.available_date,
-    })
-
-    const path = queryString ? `/public/professionals?${queryString}` : '/public/professionals'
-    return await apiFetch<PublicProfessionalListItem[]>(path, { method: 'GET' })
-  }
-
-  async function getPublicProfessional(identifier: string): Promise<PublicProfessionalDetail> {
-    return await apiFetch<PublicProfessionalDetail>(
-      `/public/professionals/${encodeURIComponent(identifier)}`,
-      { method: 'GET' },
-    )
-  }
-
-  async function getSlots(
-    professionalId: string,
-    date: string,
-    modality: string,
-  ): Promise<SlotItem[]> {
-    const query = new URLSearchParams({
-      date,
-      modality,
-    }).toString()
-
-    return await apiFetch<SlotItem[]>(
-      `/public/professionals/${encodeURIComponent(professionalId)}/slots?${query}`,
-      { method: 'GET' },
-    )
-  }
-
-  async function createAppointment(
-    payload: AppointmentCreatePayload,
-  ): Promise<AppointmentCreatedResponse> {
-    return await apiFetch<AppointmentCreatedResponse>('/patient/appointments', {
-      method: 'POST',
-      body: payload,
-    })
-  }
-
-  async function getMyAppointments(): Promise<AppointmentSummary[]> {
-    return await apiFetch<AppointmentSummary[]>('/patient/appointments', {
-      method: 'GET',
-    })
-  }
-
-  async function getCheckout(appointmentId: string): Promise<CheckoutResponse> {
-    return await apiFetch<CheckoutResponse>(`/patient/appointments/${encodeURIComponent(appointmentId)}/checkout`, {
-      method: 'GET',
-    })
-  }
-
-  async function createPaymentIntent(
-    appointmentId: string,
-    idempotencyKey: string,
-  ): Promise<PaymentIntentResponse> {
-    return await apiFetch<PaymentIntentResponse>(
-      `/patient/appointments/${encodeURIComponent(appointmentId)}/payment-intent`,
-      {
-        method: 'POST',
-        body: { idempotency_key: idempotencyKey },
-      },
-    )
-  }
-
-  async function confirmSandboxPayment(intentId: string): Promise<PaymentIntentConfirmResponse> {
-    return await apiFetch<PaymentIntentConfirmResponse>(
-      `/patient/payment-intents/${encodeURIComponent(intentId)}/confirm-sandbox`,
-      { method: 'POST' },
-    )
-  }
-
-  async function failSandboxPayment(intentId: string): Promise<{ status: string }> {
-    return await apiFetch<{ status: string }>(
-      `/patient/payment-intents/${encodeURIComponent(intentId)}/fail-sandbox`,
-      { method: 'POST' },
-    )
-  }
-
-  async function getMyPayments(): Promise<PaymentResponse[]> {
-    return await apiFetch<PaymentResponse[]>('/patient/payments', {
-      method: 'GET',
-    })
-  }
-
-  async function getMyPayment(paymentId: string): Promise<PaymentResponse> {
-    return await apiFetch<PaymentResponse>(`/patient/payments/${encodeURIComponent(paymentId)}`, {
-      method: 'GET',
-    })
-  }
-
-  // Professional endpoints
-  async function getMyPrices(): Promise<{ id: string; modality_code: string; amount: number; currency_code: string; is_active: boolean }[]> {
-    return await apiFetch('/professionals/me/prices', { method: 'GET' })
-  }
-
-  async function updateMyPrice(
-    modalityCode: string,
-    amount: number,
-  ): Promise<{ id: string; modality_code: string; amount: number; currency_code: string; is_active: boolean }> {
-    return await apiFetch('/professionals/me/prices', {
-      method: 'PUT',
-      body: { modality_code: modalityCode, amount },
-    })
-  }
-
-  async function getPendingEarnings(): Promise<{
-    total_pending_gross: number
-    total_pending_commission: number
-    total_pending_net: number
-    currency_code: string
-    appointments_count: number
-  }> {
-    return await apiFetch('/professionals/me/earnings/pending', { method: 'GET' })
-  }
-
-  async function getMySettlements(): Promise<{
-    id: string
-    batch_code: string
-    total_gross: number
-    total_commission: number
-    total_net: number
-    currency_code: string
-    status: string
-    generated_at?: string | null
-    paid_at?: string | null
-  }[]> {
-    return await apiFetch('/professionals/me/earnings/settlements', { method: 'GET' })
-  }
-
-  async function getPatientConsents(): Promise<ConsentResponse[]> {
-    return await apiFetch<ConsentResponse[]>('/patient/privacy/consents', {
-      method: 'GET',
-    })
-  }
-
-  async function createPatientConsent(payload: ConsentCreatePayload): Promise<ConsentResponse> {
-    return await apiFetch<ConsentResponse>('/patient/privacy/consents', {
-      method: 'POST',
-      body: payload,
-    })
-  }
-
-  async function revokePatientConsent(consentId: string): Promise<ConsentResponse> {
-    return await apiFetch<ConsentResponse>(`/patient/privacy/consents/${encodeURIComponent(consentId)}/revoke`, {
-      method: 'POST',
-    })
-  }
-
-  async function getPatientPrivacyPolicies(): Promise<PrivacyPolicyVersion[]> {
-    return await apiFetch<PrivacyPolicyVersion[]>('/patient/privacy/policies/active', {
-      method: 'GET',
-    })
-  }
-
-  async function getPatientAccessLogs(): Promise<ClinicalAccessLog[]> {
-    return await apiFetch<ClinicalAccessLog[]>('/patient/privacy/access-log/me', {
-      method: 'GET',
-    })
-  }
-
-  async function createExceptionalAccessRequest(
-    payload: ExceptionalAccessRequestCreatePayload,
-  ): Promise<ExceptionalAccessRequestResponse> {
-    return await apiFetch<ExceptionalAccessRequestResponse>('/professionals/me/privacy/exceptional-access-requests', {
-      method: 'POST',
-      body: payload,
-    })
-  }
-
-  async function getProfessionalExceptionalAccessRequests(): Promise<ExceptionalAccessRequestResponse[]> {
-    return await apiFetch<ExceptionalAccessRequestResponse[]>('/professionals/me/privacy/exceptional-access-requests', {
-      method: 'GET',
-    })
-  }
-
-  async function getProfessionalAccessLogs(): Promise<ClinicalAccessLog[]> {
-    return await apiFetch<ClinicalAccessLog[]>('/professionals/me/privacy/access-log/me', {
-      method: 'GET',
-    })
-  }
-  
-  async function getProfessionalAppointments(): Promise<AppointmentSummary[]> {
-    return await apiFetch<AppointmentSummary[]>('/professionals/me/appointments', {
-      method: 'GET',
-    })
-  }
-
-  async function confirmAppointment(appointmentId: string): Promise<AppointmentSummary> {
-    return await apiFetch<AppointmentSummary>(`/professionals/me/appointments/${encodeURIComponent(appointmentId)}/confirm`, {
-      method: 'POST',
-    })
-  }
-
-  async function cancelAppointment(appointmentId: string, reason?: string): Promise<AppointmentSummary> {
-    return await apiFetch<AppointmentSummary>(`/professionals/me/appointments/${encodeURIComponent(appointmentId)}/cancel`, {
-      method: 'POST',
-      body: reason ? { reason } : undefined,
-    })
-  }
-
-  async function completeAppointment(appointmentId: string): Promise<AppointmentSummary> {
-    return await apiFetch<AppointmentSummary>(`/professionals/me/appointments/${encodeURIComponent(appointmentId)}/complete`, {
-      method: 'POST',
-    })
-  }
-
-  async function getPrivacyAuditorAccessLogs(
-    filters: AuditorLogFilters = {},
-  ): Promise<PrivacyAuditorAccessLogsResponse> {
-    const queryString = buildQueryString({
-      actor_user_id: filters.actor_user_id,
-      patient_id: filters.patient_id,
-      resource_type: filters.resource_type,
-      from_date: filters.from_date,
-      to_date: filters.to_date,
-      limit: filters.limit,
-    })
-
-    const path = queryString ? `/privacy-auditor/access-logs?${queryString}` : '/privacy-auditor/access-logs'
-    return await apiFetch<PrivacyAuditorAccessLogsResponse>(path, {
-      method: 'GET',
-    })
-  }
-
-  async function getAdminPrivacyPolicies(policyType?: string): Promise<PrivacyPolicyVersion[]> {
-    const queryString = buildQueryString({
-      policy_type: policyType,
-    })
-
-    const path = queryString ? `/admin/privacy/policies?${queryString}` : '/admin/privacy/policies'
-    return await apiFetch<PrivacyPolicyVersion[]>(path, {
-      method: 'GET',
-    })
-  }
-
-  async function createAdminPrivacyPolicy(
-    payload: PrivacyPolicyVersionCreatePayload,
-  ): Promise<PrivacyPolicyVersion> {
-    return await apiFetch<PrivacyPolicyVersion>('/admin/privacy/policies', {
-      method: 'POST',
-      body: payload,
-    })
-  }
-
-  async function publishAdminPrivacyPolicy(policyId: string): Promise<PrivacyPolicyVersion> {
-    return await apiFetch<PrivacyPolicyVersion>(`/admin/privacy/policies/${encodeURIComponent(policyId)}/publish`, {
-      method: 'POST',
-    })
-  }
-
-  async function getAdminPrivacyResourcePolicies(): Promise<ResourceAccessPolicy[]> {
-    return await apiFetch<ResourceAccessPolicy[]>('/admin/privacy/resource-policies', {
-      method: 'GET',
-    })
-  }
-
-  async function updateAdminPrivacyResourcePolicy(
-    resourceType: string,
-    payload: ResourceAccessPolicyUpdatePayload,
-  ): Promise<ResourceAccessPolicy> {
-    return await apiFetch<ResourceAccessPolicy>(`/admin/privacy/resource-policies/${encodeURIComponent(resourceType)}`, {
-      method: 'PUT',
-      body: payload,
-    })
-  }
-
-  async function getAdminPrivacyAccessLogs(
-    filters: AdminPrivacyLogFilters = {},
-  ): Promise<ClinicalAccessLog[]> {
-    const queryString = buildQueryString({
-      actor_user_id: filters.actor_user_id,
-      resource_type: filters.resource_type,
-      from_date: filters.from_date,
-      to_date: filters.to_date,
-    })
-
-    const path = queryString ? `/admin/privacy/access-logs?${queryString}` : '/admin/privacy/access-logs'
-    return await apiFetch<ClinicalAccessLog[]>(path, {
-      method: 'GET',
-    })
-  }
-
-  async function exportAdminPrivacyAccessLogsMeta(
-    filters: AdminPrivacyLogFilters = {},
-  ): Promise<ClinicalAccessLog[]> {
-    const queryString = buildQueryString({
-      actor_user_id: filters.actor_user_id,
-      resource_type: filters.resource_type,
-      from_date: filters.from_date,
-      to_date: filters.to_date,
-    })
-
-    const path = queryString
-      ? `/admin/privacy/access-logs/export-meta?${queryString}`
-      : '/admin/privacy/access-logs/export-meta'
-
-    return await apiFetch<ClinicalAccessLog[]>(path, {
-      method: 'GET',
-    })
-  }
-
-  async function getAdminPrivacyRetentionPolicies(): Promise<RetentionPolicy[]> {
-    return await apiFetch<RetentionPolicy[]>('/admin/privacy/retention-policies', {
-      method: 'GET',
-    })
-  }
-
-  async function createAdminPrivacyRetentionPolicy(
-    payload: RetentionPolicyCreatePayload,
-  ): Promise<RetentionPolicy> {
-    return await apiFetch<RetentionPolicy>('/admin/privacy/retention-policies', {
-      method: 'POST',
-      body: payload,
-    })
-  }
-
-  async function updateAdminPrivacyRetentionPolicy(
-    policyId: string,
-    payload: RetentionPolicyCreatePayload,
-  ): Promise<RetentionPolicy> {
-    return await apiFetch<RetentionPolicy>(`/admin/privacy/retention-policies/${encodeURIComponent(policyId)}`, {
-      method: 'PUT',
-      body: payload,
-    })
-  }
-
-  async function getAdminPrivacyIncidents(
-    filters: AdminIncidentFilters = {},
-  ): Promise<PrivacyIncident[]> {
-    const queryString = buildQueryString({
-      status_filter: filters.status_filter,
-      severity: filters.severity,
-    })
-
-    const path = queryString ? `/admin/privacy/incidents?${queryString}` : '/admin/privacy/incidents'
-    return await apiFetch<PrivacyIncident[]>(path, {
-      method: 'GET',
-    })
-  }
-
-  async function createAdminPrivacyIncident(
-    payload: PrivacyIncidentCreatePayload,
-  ): Promise<PrivacyIncident> {
-    return await apiFetch<PrivacyIncident>('/admin/privacy/incidents', {
-      method: 'POST',
-      body: payload,
-    })
-  }
-
-  async function assignAdminPrivacyIncident(
-    incidentId: string,
-    payload: PrivacyIncidentAssignPayload,
-  ): Promise<PrivacyIncident> {
-    return await apiFetch<PrivacyIncident>(`/admin/privacy/incidents/${encodeURIComponent(incidentId)}/assign`, {
-      method: 'POST',
-      body: payload,
-    })
-  }
-
-  async function containAdminPrivacyIncident(
-    incidentId: string,
-  ): Promise<PrivacyIncident> {
-    return await apiFetch<PrivacyIncident>(`/admin/privacy/incidents/${encodeURIComponent(incidentId)}/contain`, {
-      method: 'POST',
-    })
-  }
-
-  async function resolveAdminPrivacyIncident(
-    incidentId: string,
-    payload: PrivacyIncidentResolvePayload,
-  ): Promise<PrivacyIncident> {
-    return await apiFetch<PrivacyIncident>(`/admin/privacy/incidents/${encodeURIComponent(incidentId)}/resolve`, {
-      method: 'POST',
-      body: payload,
-    })
-  }
-
-  async function dismissAdminPrivacyIncident(
-    incidentId: string,
-    payload: PrivacyIncidentDismissPayload,
-  ): Promise<PrivacyIncident> {
-    return await apiFetch<PrivacyIncident>(`/admin/privacy/incidents/${encodeURIComponent(incidentId)}/dismiss`, {
-      method: 'POST',
-      body: payload,
-    })
-  }
-
-  return {
-    apiFetch,
-    searchProfessionals,
-    getPublicProfessional,
-    getSlots,
-    createAppointment,
-    getMyAppointments,
-    getCheckout,
-    createPaymentIntent,
-    confirmSandboxPayment,
-    failSandboxPayment,
-    getMyPayments,
-    getMyPayment,
-    getMyPrices,
-    updateMyPrice,
-    getPendingEarnings,
-    getMySettlements,
-    getPatientConsents,
-    createPatientConsent,
-    revokePatientConsent,
-    getPatientPrivacyPolicies,
-    getPatientAccessLogs,
-    createExceptionalAccessRequest,
-    getProfessionalExceptionalAccessRequests,
-    getProfessionalAccessLogs,
-    getProfessionalAppointments,
-    confirmAppointment,
-    cancelAppointment,
-    completeAppointment,
-    getPrivacyAuditorAccessLogs,
-    getAdminPrivacyPolicies,
-    createAdminPrivacyPolicy,
-    publishAdminPrivacyPolicy,
-    getAdminPrivacyResourcePolicies,
-    updateAdminPrivacyResourcePolicy,
-    getAdminPrivacyAccessLogs,
-    exportAdminPrivacyAccessLogsMeta,
-    getAdminPrivacyRetentionPolicies,
-    createAdminPrivacyRetentionPolicy,
-    updateAdminPrivacyRetentionPolicy,
-    getAdminPrivacyIncidents,
-    createAdminPrivacyIncident,
-    assignAdminPrivacyIncident,
-    containAdminPrivacyIncident,
-    resolveAdminPrivacyIncident,
-    dismissAdminPrivacyIncident,
-  }
-}
-</file>
-
 <file path="web_frontend/composables/useAuth.ts">
 import type { CurrentUser, RoleCode } from '~/types/auth'
 
@@ -39040,11 +38158,25 @@ export function useAuth() {
     return '/patient/dashboard'
   }
 
+  function syncAccessToken(token: string | null) {
+    const cookie = useCookie<string | null>('access_token')
+    cookie.value = token
+  }
+
   async function bootstrapAuth() {
     const authStore = useAuthStore()
+    const cookie = useCookie<string | null>('access_token')
+    const cookieToken = cookie.value ?? null
+
     if (!authStore.loaded) {
-      await authStore.bootstrap()
+      await authStore.bootstrap(cookieToken)
+      return authStore
     }
+
+    if (!authStore.token && cookieToken) {
+      authStore.setToken(cookieToken)
+    }
+
     return authStore
   }
 
@@ -39054,13 +38186,212 @@ export function useAuth() {
     getRoleCodes,
     isAdminRole,
     resolveRoleHome,
+    syncAccessToken,
   }
 }
+</file>
+
+<file path="web_frontend/composables/useProfessionalAgenda.ts">
+export type ProfessionalMePayload = {
+  public_display_name?: string
+}
+
+export type ProfessionalPublicProfilePayload = {
+  public_title: string
+  public_bio?: string | null
+  consultation_price?: number | null
+  province?: string | null
+  city?: string | null
+  sector?: string | null
+  years_experience?: number | null
+  languages_json?: string | null
+  is_public: boolean
+}
+
+export type ProfessionalPublicProfileResponse = {
+  id?: string
+  professional_id: string
+  public_display_name?: string | null
+  public_title?: string | null
+  public_bio?: string | null
+  consultation_price?: number | null
+  province?: string | null
+  city?: string | null
+  sector?: string | null
+  years_experience?: number | null
+  languages_json?: string | null
+  is_public?: boolean
+  professional_status?: string | null
+  onboarding_status?: string | null
+}
+
+export type ProfessionalAvailabilityPayload = {
+  weekday: number
+  start_time: string
+  end_time: string
+  slot_minutes: number
+  modality_code: string
+}
+
+export type ProfessionalAvailabilityItem = ProfessionalAvailabilityPayload & {
+  id: string
+  professional_id: string
+  status: string
+  created_at?: string | null
+  updated_at?: string | null
+}
+
+export type ProfessionalTimeBlockPayload = {
+  starts_at: string
+  ends_at: string
+  reason?: string | null
+  block_type: string
+}
+
+export type ProfessionalTimeBlockItem = {
+  id: string
+  professional_id: string
+  starts_at: string
+  ends_at: string
+  reason?: string | null
+  block_type: string
+  created_at?: string | null
+  updated_at?: string | null
+}
+
+export type ProfessionalModalityItem = {
+  id: string
+  code: string
+  name: string
+}
+
+export function useProfessionalAgenda() {
+  const { apiFetch } = useApi()
+
+  async function getProfessionalMe() {
+    return await apiFetch<{ id: string; public_display_name?: string | null }>('/professionals/me', {
+      method: 'GET',
+    })
+  }
+
+  async function updateProfessionalMe(payload: ProfessionalMePayload) {
+    return await apiFetch('/professionals/me', {
+      method: 'PATCH',
+      body: payload,
+    })
+  }
+
+  async function getMyPublicProfile() {
+    return await apiFetch<ProfessionalPublicProfileResponse>('/professionals/me/public-profile', {
+      method: 'GET',
+    })
+  }
+
+  async function updateMyPublicProfile(payload: ProfessionalPublicProfilePayload) {
+    return await apiFetch<ProfessionalPublicProfileResponse>('/professionals/me/public-profile', {
+      method: 'PUT',
+      body: payload,
+    })
+  }
+
+  async function getMyAvailabilities() {
+    return await apiFetch<ProfessionalAvailabilityItem[]>('/professionals/me/availabilities', {
+      method: 'GET',
+    })
+  }
+
+  async function createAvailability(payload: ProfessionalAvailabilityPayload) {
+    return await apiFetch<ProfessionalAvailabilityItem>('/professionals/me/availabilities', {
+      method: 'POST',
+      body: payload,
+    })
+  }
+
+  async function updateAvailability(id: string, payload: ProfessionalAvailabilityPayload) {
+    return await apiFetch<ProfessionalAvailabilityItem>(`/professionals/me/availabilities/${encodeURIComponent(id)}`, {
+      method: 'PUT',
+      body: payload,
+    })
+  }
+
+  async function deleteAvailability(id: string) {
+    return await apiFetch<{ status: string; id: string }>(`/professionals/me/availabilities/${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+    })
+  }
+
+  async function getMyTimeBlocks() {
+    return await apiFetch<ProfessionalTimeBlockItem[]>('/professionals/me/time-blocks', {
+      method: 'GET',
+    })
+  }
+
+  async function createTimeBlock(payload: ProfessionalTimeBlockPayload) {
+    return await apiFetch<ProfessionalTimeBlockItem>('/professionals/me/time-blocks', {
+      method: 'POST',
+      body: payload,
+    })
+  }
+
+  async function updateTimeBlock(id: string, payload: ProfessionalTimeBlockPayload) {
+    return await apiFetch<ProfessionalTimeBlockItem>(`/professionals/me/time-blocks/${encodeURIComponent(id)}`, {
+      method: 'PUT',
+      body: payload,
+    })
+  }
+
+  async function deleteTimeBlock(id: string) {
+    return await apiFetch<{ status: string; id: string }>(`/professionals/me/time-blocks/${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+    })
+  }
+
+  async function getMyModalities() {
+    return await apiFetch<ProfessionalModalityItem[]>('/professionals/me/modalities', {
+      method: 'GET',
+    })
+  }
+
+  return {
+    getProfessionalMe,
+    updateProfessionalMe,
+    getMyPublicProfile,
+    updateMyPublicProfile,
+    getMyAvailabilities,
+    createAvailability,
+    updateAvailability,
+    deleteAvailability,
+    getMyTimeBlocks,
+    createTimeBlock,
+    updateTimeBlock,
+    deleteTimeBlock,
+    getMyModalities,
+  }
+}
+</file>
+
+<file path="web_frontend/Dockerfile.dev">
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Instalamos dependencias
+COPY package*.json ./
+RUN npm install
+
+# Copiamos el resto del código
+COPY . .
+
+EXPOSE 3000
+
+# Iniciamos Nuxt en modo desarrollo
+CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0", "--port", "3000"]
 </file>
 
 <file path="web_frontend/layouts/admin.vue">
 <script setup lang="ts">
 const authStore = useAuthStore()
+const { syncAccessToken } = useAuth()
 
 const links = [
   { title: 'Dashboard', to: '/admin/dashboard', icon: 'mdi-view-dashboard' },
@@ -39070,6 +38401,7 @@ const links = [
 ]
 
 async function handleLogout() {
+  syncAccessToken(null)
   authStore.logout()
   await navigateTo('/login')
 }
@@ -39129,7 +38461,7 @@ async function handleLogout() {
 <file path="web_frontend/layouts/default.vue">
 <script setup lang="ts">
 const authStore = useAuthStore()
-const { bootstrapAuth, resolveRoleHome } = useAuth()
+const { bootstrapAuth, resolveRoleHome, syncAccessToken } = useAuth()
 
 await bootstrapAuth()
 
@@ -39145,6 +38477,7 @@ const primaryLink = computed(() => {
 })
 
 async function handleLogout() {
+  syncAccessToken(null)
   authStore.logout()
   await navigateTo('/login')
 }
@@ -39180,6 +38513,7 @@ async function handleLogout() {
 <file path="web_frontend/layouts/patient.vue">
 <script setup lang="ts">
 const authStore = useAuthStore()
+const { syncAccessToken } = useAuth()
 
 const links = [
   { title: 'Dashboard', to: '/patient/dashboard', icon: 'mdi-view-dashboard' },
@@ -39190,6 +38524,7 @@ const links = [
 ]
 
 async function handleLogout() {
+  syncAccessToken(null)
   authStore.logout()
   await navigateTo('/login')
 }
@@ -39217,62 +38552,6 @@ async function handleLogout() {
         <div class="d-flex justify-space-between align-center mb-6">
           <div>
             <h1 class="text-h5 font-weight-bold">Paciente</h1>
-            <p class="text-body-2 text-medium-emphasis mb-0">
-              {{ authStore.user?.email ?? 'Sesion activa' }}
-            </p>
-          </div>
-          <v-btn color="primary" variant="outlined" @click="handleLogout">
-            Cerrar sesion
-          </v-btn>
-        </div>
-        <slot />
-      </v-container>
-    </v-main>
-  </v-app>
-</template>
-</file>
-
-<file path="web_frontend/layouts/professional.vue">
-<script setup lang="ts">
-const authStore = useAuthStore()
-
-const links = [
-  { title: 'Dashboard', to: '/professional/dashboard', icon: 'mdi-view-dashboard' },
-  { title: 'Citas', to: '/professional/appointments', icon: 'mdi-calendar-account' },
-  { title: 'Precios', to: '/professional/prices', icon: 'mdi-cash-multiple' },
-  { title: 'Ganancias', to: '/professional/earnings', icon: 'mdi-chart-line' },
-  { title: 'Teleconsulta', to: '/professional/teleconsultation/demo-appointment', icon: 'mdi-video' },
-  { title: 'Privacidad', to: '/professional/privacy/access-logs', icon: 'mdi-file-shield' },
-]
-
-async function handleLogout() {
-  authStore.logout()
-  await navigateTo('/login')
-}
-</script>
-
-<template>
-  <v-app>
-    <v-navigation-drawer permanent color="blue-grey-darken-4">
-      <v-list bg-color="blue-grey-darken-4" density="comfortable" nav>
-        <v-list-item title="Panel profesional" subtitle="BuscaMedicos" />
-        <v-divider class="my-2" />
-        <v-list-item
-          v-for="link in links"
-          :key="link.to"
-          :prepend-icon="link.icon"
-          :title="link.title"
-          :to="link.to"
-          rounded="lg"
-        />
-      </v-list>
-    </v-navigation-drawer>
-
-    <v-main class="bg-blue-grey-lighten-5">
-      <v-container class="py-8">
-        <div class="d-flex justify-space-between align-center mb-6">
-          <div>
-            <h1 class="text-h5 font-weight-bold">Profesional</h1>
             <p class="text-body-2 text-medium-emphasis mb-0">
               {{ authStore.user?.email ?? 'Sesion activa' }}
             </p>
@@ -41047,7 +40326,7 @@ definePageMeta({
 const route = useRoute()
 const authStore = useAuthStore()
 const { apiFetch } = useApi()
-const { resolveRoleHome } = useAuth()
+const { resolveRoleHome, syncAccessToken } = useAuth()
 
 const form = reactive<LoginPayload>({
   email: '',
@@ -41079,7 +40358,9 @@ async function handleSubmit() {
       body: validation.data,
     })
 
+    syncAccessToken(response.access_token)
     authStore.setToken(response.access_token)
+
     const user = await authStore.fetchMe()
     const requestedRedirect = typeof route.query.redirect === 'string' ? route.query.redirect : ''
     const target = requestedRedirect.startsWith('/')
@@ -43314,52 +42595,775 @@ definePageMeta({
 </template>
 </file>
 
-<file path="web_frontend/pages/professional/dashboard.vue">
+<file path="web_frontend/pages/professional/agenda.vue">
 <script setup lang="ts">
+import { FetchError } from 'ofetch'
+
+import {
+  useProfessionalAgenda,
+  type ProfessionalAvailabilityItem,
+  type ProfessionalTimeBlockItem,
+  type ProfessionalModalityItem,
+} from '~/composables/useProfessionalAgenda'
+
 definePageMeta({
   layout: 'professional',
   middleware: ['auth', 'role'],
   roles: ['professional'],
 })
 
-const cards = [
-  {
-    title: 'Citas',
-    text: 'Revisa agenda, estados y seguimiento clinico inicial.',
-    to: '/professional/appointments',
-    icon: 'mdi-calendar-account',
-  },
-  {
-    title: 'Teleconsulta',
-    text: 'Prepara el acceso a sesiones virtuales y herramientas clinicas.',
-    to: '/professional/teleconsultation/demo-appointment',
-    icon: 'mdi-video-outline',
-  },
-  {
-    title: 'Privacidad',
-    text: 'Consulta accesos y solicita acceso excepcional cuando aplique.',
-    to: '/professional/privacy/access-logs',
-    icon: 'mdi-file-lock-outline',
-  },
+const {
+  getProfessionalMe,
+  updateProfessionalMe,
+  getMyPublicProfile,
+  updateMyPublicProfile,
+  getMyAvailabilities,
+  createAvailability,
+  updateAvailability,
+  deleteAvailability,
+  getMyTimeBlocks,
+  createTimeBlock,
+  updateTimeBlock,
+  deleteTimeBlock,
+  getMyModalities,
+} = useProfessionalAgenda()
+
+const loadingAll = ref(false)
+const savingProfile = ref(false)
+const savingAvailability = ref(false)
+const savingBlock = ref(false)
+const deletingAvailabilityId = ref<string | null>(null)
+const deletingBlockId = ref<string | null>(null)
+
+const errorMessage = ref('')
+const successMessage = ref('')
+
+const professionalForm = reactive({
+  public_display_name: '',
+})
+
+const profileForm = reactive({
+  public_title: '',
+  public_bio: '',
+  consultation_price: null as number | null,
+  province: '',
+  city: '',
+  sector: '',
+  years_experience: null as number | null,
+  languages_json: '',
+  is_public: false,
+})
+
+const availabilityForm = reactive({
+  weekday: 0,
+  modality_code: 'in_person_consultorio',
+  start_time: '08:00',
+  end_time: '12:00',
+  slot_minutes: 30,
+})
+
+const timeBlockForm = reactive({
+  starts_at: '',
+  ends_at: '',
+  reason: '',
+  block_type: 'manual_block',
+})
+
+const editingAvailabilityId = ref<string | null>(null)
+const editingBlockId = ref<string | null>(null)
+
+const availabilities = ref<ProfessionalAvailabilityItem[]>([])
+const timeBlocks = ref<ProfessionalTimeBlockItem[]>([])
+const modalityOptions = ref<ProfessionalModalityItem[]>([
+  { id: 'fallback-in-person', code: 'in_person_consultorio', name: 'Consulta presencial' },
+  { id: 'fallback-tele', code: 'teleconsulta', name: 'Teleconsulta' },
+])
+
+
+
+const weekdayOptions = [
+  { title: 'Lunes', value: 0 },
+  { title: 'Martes', value: 1 },
+  { title: 'Miércoles', value: 2 },
+  { title: 'Jueves', value: 3 },
+  { title: 'Viernes', value: 4 },
+  { title: 'Sábado', value: 5 },
+  { title: 'Domingo', value: 6 },
 ]
+
+const slotMinuteOptions = [15, 20, 30, 45, 60].map(value => ({
+  title: `${value} minutos`,
+  value,
+}))
+
+function resolveError(error: unknown, fallback: string) {
+  if (error instanceof FetchError) {
+    return error.data?.detail?.toString() || fallback
+  }
+  return fallback
+}
+
+function clearMessages() {
+  errorMessage.value = ''
+  successMessage.value = ''
+}
+
+function formatWeekday(value: number) {
+  return weekdayOptions.find(item => item.value === value)?.title || `Día ${value}`
+}
+
+function formatDateTime(value?: string | null) {
+  if (!value) return 'N/A'
+  const parsed = new Date(value)
+  if (Number.isNaN(parsed.getTime())) return value
+  return parsed.toLocaleString('es-EC', {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  })
+}
+
+function toLocalDateTimeInputValue(value?: string | null) {
+  if (!value) return ''
+  const parsed = new Date(value)
+  if (Number.isNaN(parsed.getTime())) return ''
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${parsed.getFullYear()}-${pad(parsed.getMonth() + 1)}-${pad(parsed.getDate())}T${pad(parsed.getHours())}:${pad(parsed.getMinutes())}`
+}
+
+function toBackendDateTime(value: string) {
+  if (!value) return ''
+  return value.length === 16 ? `${value}:00` : value
+}
+
+function resetAvailabilityForm() {
+  availabilityForm.weekday = 0
+  availabilityForm.modality_code = modalityOptions.value[0]?.code || 'in_person_consultorio'
+  availabilityForm.start_time = '08:00'
+  availabilityForm.end_time = '12:00'
+  availabilityForm.slot_minutes = 30
+  editingAvailabilityId.value = null
+}
+
+function resetTimeBlockForm() {
+  timeBlockForm.starts_at = ''
+  timeBlockForm.ends_at = ''
+  timeBlockForm.reason = ''
+  timeBlockForm.block_type = 'manual_block'
+  editingBlockId.value = null
+}
+
+async function loadAll() {
+  loadingAll.value = true
+  clearMessages()
+
+  try {
+    const [
+      professional,
+      profile,
+      availabilityRows,
+      blockRows,
+      modalityRows,
+    ] = await Promise.all([
+      getProfessionalMe(),
+      getMyPublicProfile(),
+      getMyAvailabilities(),
+      getMyTimeBlocks(),
+      getMyModalities().catch(() => modalityOptions.value),
+    ])
+
+    professionalForm.public_display_name = professional.public_display_name || ''
+
+    profileForm.public_title = profile.public_title || ''
+    profileForm.public_bio = profile.public_bio || ''
+    profileForm.consultation_price = profile.consultation_price ?? null
+    profileForm.province = profile.province || ''
+    profileForm.city = profile.city || ''
+    profileForm.sector = profile.sector || ''
+    profileForm.years_experience = profile.years_experience ?? null
+    profileForm.languages_json = profile.languages_json || ''
+    profileForm.is_public = Boolean(profile.is_public)
+
+    availabilities.value = availabilityRows
+    timeBlocks.value = blockRows
+    modalityOptions.value = modalityRows.length ? modalityRows : modalityOptions.value
+
+    if (!availabilityForm.modality_code && modalityOptions.value.length) {
+      availabilityForm.modality_code = modalityOptions.value[0].code
+    }
+  }
+  catch (error: unknown) {
+    errorMessage.value = resolveError(error, 'No se pudo cargar la configuración operativa del profesional.')
+  }
+  finally {
+    loadingAll.value = false
+  }
+}
+
+async function handleSaveProfile() {
+  savingProfile.value = true
+  clearMessages()
+
+  try {
+    await updateProfessionalMe({
+      public_display_name: professionalForm.public_display_name || null,
+    })
+
+    await updateMyPublicProfile({
+      public_title: profileForm.public_title,
+      public_bio: profileForm.public_bio || null,
+      consultation_price: profileForm.consultation_price,
+      province: profileForm.province || null,
+      city: profileForm.city || null,
+      sector: profileForm.sector || null,
+      years_experience: profileForm.years_experience,
+      languages_json: profileForm.languages_json || null,
+      is_public: profileForm.is_public,
+    })
+
+    successMessage.value = 'Perfil y configuración pública guardados correctamente.'
+  }
+  catch (error: unknown) {
+    errorMessage.value = resolveError(error, 'No se pudo guardar el perfil público.')
+  }
+  finally {
+    savingProfile.value = false
+  }
+}
+
+async function handleSaveAvailability() {
+  savingAvailability.value = true
+  clearMessages()
+
+  try {
+    const payload = {
+      weekday: availabilityForm.weekday,
+      modality_code: availabilityForm.modality_code,
+      start_time: availabilityForm.start_time,
+      end_time: availabilityForm.end_time,
+      slot_minutes: availabilityForm.slot_minutes,
+    }
+
+    let saved: ProfessionalAvailabilityItem
+    if (editingAvailabilityId.value) {
+      saved = await updateAvailability(editingAvailabilityId.value, payload)
+      availabilities.value = availabilities.value.map(item =>
+        item.id === saved.id ? saved : item,
+      )
+      successMessage.value = 'Disponibilidad actualizada correctamente.'
+    }
+    else {
+      saved = await createAvailability(payload)
+      availabilities.value.push(saved)
+      successMessage.value = 'Disponibilidad creada correctamente.'
+    }
+
+    availabilities.value = [...availabilities.value].sort((a, b) => {
+      if (a.weekday !== b.weekday) return a.weekday - b.weekday
+      return a.start_time.localeCompare(b.start_time)
+    })
+
+    resetAvailabilityForm()
+  }
+  catch (error: unknown) {
+    errorMessage.value = resolveError(error, 'No se pudo guardar la disponibilidad.')
+  }
+  finally {
+    savingAvailability.value = false
+  }
+}
+
+function editAvailability(item: ProfessionalAvailabilityItem) {
+  availabilityForm.weekday = item.weekday
+  availabilityForm.modality_code = item.modality_code
+  availabilityForm.start_time = item.start_time.slice(0, 5)
+  availabilityForm.end_time = item.end_time.slice(0, 5)
+  availabilityForm.slot_minutes = item.slot_minutes
+  editingAvailabilityId.value = item.id
+}
+
+async function handleDeleteAvailability(id: string) {
+  deletingAvailabilityId.value = id
+  clearMessages()
+
+  try {
+    await deleteAvailability(id)
+    availabilities.value = availabilities.value.filter(item => item.id !== id)
+    if (editingAvailabilityId.value === id) {
+      resetAvailabilityForm()
+    }
+    successMessage.value = 'Disponibilidad eliminada correctamente.'
+  }
+  catch (error: unknown) {
+    errorMessage.value = resolveError(error, 'No se pudo eliminar la disponibilidad.')
+  }
+  finally {
+    deletingAvailabilityId.value = null
+  }
+}
+
+async function handleSaveTimeBlock() {
+  savingBlock.value = true
+  clearMessages()
+
+  try {
+    const payload = {
+      starts_at: toBackendDateTime(timeBlockForm.starts_at),
+      ends_at: toBackendDateTime(timeBlockForm.ends_at),
+      reason: timeBlockForm.reason || null,
+      block_type: timeBlockForm.block_type,
+    }
+
+    let saved: ProfessionalTimeBlockItem
+    if (editingBlockId.value) {
+      saved = await updateTimeBlock(editingBlockId.value, payload)
+      timeBlocks.value = timeBlocks.value.map(item => item.id === saved.id ? saved : item)
+      successMessage.value = 'Bloqueo actualizado correctamente.'
+    }
+    else {
+      saved = await createTimeBlock(payload)
+      timeBlocks.value.unshift(saved)
+      successMessage.value = 'Bloqueo creado correctamente.'
+    }
+
+    timeBlocks.value = [...timeBlocks.value].sort((a, b) => {
+      return new Date(b.starts_at).getTime() - new Date(a.starts_at).getTime()
+    })
+
+    resetTimeBlockForm()
+  }
+  catch (error: unknown) {
+    errorMessage.value = resolveError(error, 'No se pudo guardar el bloqueo.')
+  }
+  finally {
+    savingBlock.value = false
+  }
+}
+
+function editTimeBlock(item: ProfessionalTimeBlockItem) {
+  timeBlockForm.starts_at = toLocalDateTimeInputValue(item.starts_at)
+  timeBlockForm.ends_at = toLocalDateTimeInputValue(item.ends_at)
+  timeBlockForm.reason = item.reason || ''
+  timeBlockForm.block_type = item.block_type || 'manual_block'
+  editingBlockId.value = item.id
+}
+
+async function handleDeleteTimeBlock(id: string) {
+  deletingBlockId.value = id
+  clearMessages()
+
+  try {
+    await deleteTimeBlock(id)
+    timeBlocks.value = timeBlocks.value.filter(item => item.id !== id)
+    if (editingBlockId.value === id) {
+      resetTimeBlockForm()
+    }
+    successMessage.value = 'Bloqueo eliminado correctamente.'
+  }
+  catch (error: unknown) {
+    errorMessage.value = resolveError(error, 'No se pudo eliminar el bloqueo.')
+  }
+  finally {
+    deletingBlockId.value = null
+  }
+}
+
+onMounted(() => {
+  loadAll()
+})
 </script>
 
 <template>
-  <v-row>
-    <v-col v-for="card in cards" :key="card.to" cols="12" md="4">
-      <v-card class="h-100" rounded="xl">
-        <v-card-item :prepend-icon="card.icon">
-          <v-card-title>{{ card.title }}</v-card-title>
-        </v-card-item>
-        <v-card-text>{{ card.text }}</v-card-text>
-        <v-card-actions>
-          <v-btn :to="card.to" color="primary" variant="tonal">
-            Abrir
-          </v-btn>
-        </v-card-actions>
-      </v-card>
-    </v-col>
-  </v-row>
+  <div>
+    <div class="d-flex justify-space-between align-center mb-6">
+      <div>
+        <h2 class="text-h5 font-weight-bold">Perfil y agenda</h2>
+        <p class="text-body-2 text-medium-emphasis mb-0">
+          Desde esta pantalla se configura lo necesario para que las reservas públicas funcionen de forma real.
+        </p>
+      </div>
+
+      <v-btn
+        color="primary"
+        prepend-icon="mdi-refresh"
+        variant="tonal"
+        :loading="loadingAll"
+        @click="loadAll"
+      >
+        Recargar
+      </v-btn>
+    </div>
+
+    <v-alert
+      v-if="errorMessage"
+      class="mb-4"
+      type="error"
+      variant="tonal"
+    >
+      {{ errorMessage }}
+    </v-alert>
+
+    <v-alert
+      v-if="successMessage"
+      class="mb-4"
+      type="success"
+      variant="tonal"
+    >
+      {{ successMessage }}
+    </v-alert>
+
+    <v-row>
+      <v-col cols="12" lg="6">
+        <v-card rounded="xl">
+          <v-card-item prepend-icon="mdi-account-card-outline">
+            <v-card-title>Perfil público</v-card-title>
+            <v-card-subtitle>
+              Esta información alimenta la búsqueda pública y el detalle del profesional.
+            </v-card-subtitle>
+          </v-card-item>
+
+          <v-card-text class="d-flex flex-column ga-4">
+            <v-text-field
+              v-model="professionalForm.public_display_name"
+              label="Nombre público"
+              variant="outlined"
+            />
+
+            <v-text-field
+              v-model="profileForm.public_title"
+              label="Título público"
+              variant="outlined"
+            />
+
+            <v-textarea
+              v-model="profileForm.public_bio"
+              label="Biografía pública"
+              rows="5"
+              variant="outlined"
+            />
+
+            <v-text-field
+              v-model.number="profileForm.consultation_price"
+              label="Precio referencial público (USD)"
+              type="number"
+              min="0"
+              step="0.01"
+              variant="outlined"
+            />
+
+            <v-row>
+              <v-col cols="12" md="6">
+                <v-text-field
+                  v-model="profileForm.province"
+                  label="Provincia"
+                  variant="outlined"
+                />
+              </v-col>
+              <v-col cols="12" md="6">
+                <v-text-field
+                  v-model="profileForm.city"
+                  label="Ciudad"
+                  variant="outlined"
+                />
+              </v-col>
+            </v-row>
+
+            <v-text-field
+              v-model="profileForm.sector"
+              label="Sector"
+              variant="outlined"
+            />
+
+            <v-text-field
+              v-model.number="profileForm.years_experience"
+              label="Años de experiencia"
+              type="number"
+              min="0"
+              variant="outlined"
+            />
+
+            <v-text-field
+              v-model="profileForm.languages_json"
+              label="Idiomas visibles"
+              hint="Ejemplo: español, inglés"
+              persistent-hint
+              variant="outlined"
+            />
+
+            <v-switch
+              v-model="profileForm.is_public"
+              color="primary"
+              inset
+              label="Publicar perfil en búsqueda"
+            />
+          </v-card-text>
+
+          <v-card-actions>
+            <v-spacer />
+            <v-btn
+              color="primary"
+              :loading="savingProfile"
+              prepend-icon="mdi-content-save-outline"
+              @click="handleSaveProfile"
+            >
+              Guardar perfil
+            </v-btn>
+          </v-card-actions>
+        </v-card>
+      </v-col>
+
+      <v-col cols="12" lg="6">
+        <v-card rounded="xl" class="mb-6">
+          <v-card-item prepend-icon="mdi-calendar-clock-outline">
+            <v-card-title>Disponibilidad semanal</v-card-title>
+            <v-card-subtitle>
+              Estos horarios generan los slots públicos para reserva.
+            </v-card-subtitle>
+          </v-card-item>
+
+          <v-card-text class="d-flex flex-column ga-4">
+            <v-row>
+              <v-col cols="12" md="6">
+                <v-select
+                  v-model="availabilityForm.weekday"
+                  :items="weekdayOptions"
+                  item-title="title"
+                  item-value="value"
+                  label="Día"
+                  variant="outlined"
+                />
+              </v-col>
+
+              <v-col cols="12" md="6">
+                <v-select
+                  v-model="availabilityForm.modality_code"
+                  :items="modalityOptions"
+                  item-title="name"
+                  item-value="code"
+                  label="Modalidad"
+                  variant="outlined"
+                />
+              </v-col>
+            </v-row>
+
+            <v-row>
+              <v-col cols="12" md="4">
+                <v-text-field
+                  v-model="availabilityForm.start_time"
+                  label="Hora inicio"
+                  type="time"
+                  variant="outlined"
+                />
+              </v-col>
+
+              <v-col cols="12" md="4">
+                <v-text-field
+                  v-model="availabilityForm.end_time"
+                  label="Hora fin"
+                  type="time"
+                  variant="outlined"
+                />
+              </v-col>
+
+              <v-col cols="12" md="4">
+                <v-select
+                  v-model="availabilityForm.slot_minutes"
+                  :items="slotMinuteOptions"
+                  item-title="title"
+                  item-value="value"
+                  label="Duración slot"
+                  variant="outlined"
+                />
+              </v-col>
+            </v-row>
+          </v-card-text>
+
+          <v-card-actions>
+            <v-btn
+              v-if="editingAvailabilityId"
+              variant="text"
+              @click="resetAvailabilityForm"
+            >
+              Cancelar edición
+            </v-btn>
+
+            <v-spacer />
+
+            <v-btn
+              color="primary"
+              :loading="savingAvailability"
+              prepend-icon="mdi-content-save-outline"
+              @click="handleSaveAvailability"
+            >
+              {{ editingAvailabilityId ? 'Actualizar disponibilidad' : 'Agregar disponibilidad' }}
+            </v-btn>
+          </v-card-actions>
+        </v-card>
+
+        <v-card rounded="xl">
+          <v-card-item prepend-icon="mdi-format-list-bulleted-square">
+            <v-card-title>Disponibilidades actuales</v-card-title>
+          </v-card-item>
+
+          <v-card-text v-if="!availabilities.length" class="text-medium-emphasis">
+            No existen disponibilidades cargadas todavía.
+          </v-card-text>
+
+          <v-list v-else lines="two">
+            <v-list-item
+              v-for="item in availabilities"
+              :key="item.id"
+            >
+              <template #title>
+                {{ formatWeekday(item.weekday) }} · {{ item.modality_code }}
+              </template>
+
+              <template #subtitle>
+                {{ item.start_time }} - {{ item.end_time }} · {{ item.slot_minutes }} min
+              </template>
+
+              <template #append>
+                <div class="d-flex ga-2">
+                  <v-btn
+                    size="small"
+                    variant="tonal"
+                    color="primary"
+                    prepend-icon="mdi-pencil-outline"
+                    @click="editAvailability(item)"
+                  >
+                    Editar
+                  </v-btn>
+
+                  <v-btn
+                    size="small"
+                    variant="tonal"
+                    color="error"
+                    prepend-icon="mdi-delete-outline"
+                    :loading="deletingAvailabilityId === item.id"
+                    @click="handleDeleteAvailability(item.id)"
+                  >
+                    Eliminar
+                  </v-btn>
+                </div>
+              </template>
+            </v-list-item>
+          </v-list>
+        </v-card>
+      </v-col>
+    </v-row>
+
+    <v-card rounded="xl" class="mt-6">
+      <v-card-item prepend-icon="mdi-calendar-remove-outline">
+        <v-card-title>Bloqueos puntuales</v-card-title>
+        <v-card-subtitle>
+          Sirven para vacaciones, ausencias, reuniones o cierres parciales de agenda.
+        </v-card-subtitle>
+      </v-card-item>
+
+      <v-card-text class="d-flex flex-column ga-4">
+        <v-row>
+          <v-col cols="12" md="4">
+            <v-text-field
+              v-model="timeBlockForm.starts_at"
+              label="Inicio"
+              type="datetime-local"
+              variant="outlined"
+            />
+          </v-col>
+
+          <v-col cols="12" md="4">
+            <v-text-field
+              v-model="timeBlockForm.ends_at"
+              label="Fin"
+              type="datetime-local"
+              variant="outlined"
+            />
+          </v-col>
+
+          <v-col cols="12" md="4">
+            <v-text-field
+              v-model="timeBlockForm.block_type"
+              label="Tipo de bloqueo"
+              variant="outlined"
+            />
+          </v-col>
+        </v-row>
+
+        <v-text-field
+          v-model="timeBlockForm.reason"
+          label="Motivo"
+          variant="outlined"
+        />
+      </v-card-text>
+
+      <v-card-actions>
+        <v-btn
+          v-if="editingBlockId"
+          variant="text"
+          @click="resetTimeBlockForm"
+        >
+          Cancelar edición
+        </v-btn>
+
+        <v-spacer />
+
+        <v-btn
+          color="primary"
+          :loading="savingBlock"
+          prepend-icon="mdi-content-save-outline"
+          @click="handleSaveTimeBlock"
+        >
+          {{ editingBlockId ? 'Actualizar bloqueo' : 'Agregar bloqueo' }}
+        </v-btn>
+      </v-card-actions>
+
+      <v-divider class="my-2" />
+
+      <v-card-text v-if="!timeBlocks.length" class="text-medium-emphasis">
+        No existen bloqueos puntuales cargados.
+      </v-card-text>
+
+      <v-list v-else lines="two">
+        <v-list-item
+          v-for="item in timeBlocks"
+          :key="item.id"
+        >
+          <template #title>
+            {{ item.block_type }}
+          </template>
+
+          <template #subtitle>
+            {{ formatDateTime(item.starts_at) }} → {{ formatDateTime(item.ends_at) }}
+            <span v-if="item.reason">· {{ item.reason }}</span>
+          </template>
+
+          <template #append>
+            <div class="d-flex ga-2">
+              <v-btn
+                size="small"
+                variant="tonal"
+                color="primary"
+                prepend-icon="mdi-pencil-outline"
+                @click="editTimeBlock(item)"
+              >
+                Editar
+              </v-btn>
+
+              <v-btn
+                size="small"
+                variant="tonal"
+                color="error"
+                prepend-icon="mdi-delete-outline"
+                :loading="deletingBlockId === item.id"
+                @click="handleDeleteTimeBlock(item.id)"
+              >
+                Eliminar
+              </v-btn>
+            </div>
+          </template>
+        </v-list-item>
+      </v-list>
+    </v-card>
+  </div>
 </template>
 </file>
 
@@ -44469,7 +44473,7 @@ definePageMeta({
 
 const authStore = useAuthStore()
 const { apiFetch } = useApi()
-const { resolveRoleHome } = useAuth()
+const { resolveRoleHome, syncAccessToken } = useAuth()
 
 const accountRole = ref<RegisterRole>('patient')
 const form = reactive<RegisterPayload>({
@@ -44518,7 +44522,9 @@ async function handleSubmit() {
       body: payload,
     })
 
+    syncAccessToken(response.access_token)
     authStore.setToken(response.access_token)
+
     await authStore.fetchMe()
     await navigateTo(resolveRoleHome(authStore.roleCodes))
   }
@@ -44548,46 +44554,27 @@ async function handleSubmit() {
         {{ formError }}
       </v-alert>
 
-      <v-switch
-        v-model="accountRole"
-        class="mb-4"
-        color="primary"
-        false-value="patient"
-        inset
-        label="Crear cuenta profesional"
-        true-value="professional"
-      />
-
       <v-form @submit.prevent="handleSubmit">
-        <v-row>
-          <v-col cols="12" md="6">
-            <v-text-field v-model="form.first_name" label="Nombres" variant="outlined" />
-          </v-col>
-          <v-col cols="12" md="6">
-            <v-text-field v-model="form.last_name" label="Apellidos" variant="outlined" />
-          </v-col>
-          <v-col cols="12">
-            <v-text-field v-model="form.email" label="Email" type="email" variant="outlined" />
-          </v-col>
-          <v-col cols="12">
-            <v-text-field v-model="form.password" label="Contrasena" type="password" variant="outlined" />
-          </v-col>
-          <v-col cols="12" md="6">
-            <v-text-field v-model="form.national_id" label="Cedula" variant="outlined" />
-          </v-col>
-          <v-col cols="12" md="6">
-            <v-text-field v-model="form.phone" label="Telefono" variant="outlined" />
-          </v-col>
-        </v-row>
+        <v-radio-group v-model="accountRole" class="mb-2" inline>
+          <v-radio label="Paciente" value="patient" />
+          <v-radio label="Profesional" value="professional" />
+        </v-radio-group>
+
+        <v-text-field v-model="form.first_name" label="Nombres" variant="outlined" />
+        <v-text-field v-model="form.last_name" label="Apellidos" variant="outlined" />
+        <v-text-field v-model="form.email" label="Email" type="email" variant="outlined" />
+        <v-text-field v-model="form.password" label="Contrasena" type="password" variant="outlined" />
+        <v-text-field v-model="form.national_id" label="Cedula" variant="outlined" />
+        <v-text-field v-model="form.phone" label="Telefono" variant="outlined" />
 
         <v-btn :loading="isSubmitting" block color="primary" size="large" type="submit">
-          {{ accountRole === 'patient' ? 'Registrar paciente' : 'Registrar profesional' }}
+          Crear cuenta
         </v-btn>
       </v-form>
     </v-card-text>
 
     <v-card-actions class="px-6 pb-6">
-      <span class="text-body-2 text-medium-emphasis">Ya tienes cuenta?</span>
+      <span class="text-body-2 text-medium-emphasis">Ya existe una cuenta?</span>
       <v-spacer />
       <v-btn to="/login" variant="text">Ir a login</v-btn>
     </v-card-actions>
@@ -44726,21 +44713,22 @@ export const useAuthStore = defineStore('auth', {
     user: null,
     loaded: false,
   }),
+
   getters: {
     roleCodes: (state): RoleCode[] => getRoleCodes(state.user),
     isAuthenticated: (state): boolean => Boolean(state.token),
   },
+
   actions: {
-    hydrateFromCookie() {
-      const cookie = useCookie<string | null>('access_token')
-      this.token = cookie.value ?? null
+    hydrate(token: string | null) {
+      this.token = token
       return this.token
     },
+
     setToken(token: string | null) {
       this.token = token
-      const cookie = useCookie<string | null>('access_token')
-      cookie.value = token
     },
+
     async fetchMe() {
       const { apiFetch } = useApi()
 
@@ -44760,8 +44748,9 @@ export const useAuthStore = defineStore('auth', {
       this.loaded = true
       return this.user
     },
-    async bootstrap() {
-      this.hydrateFromCookie()
+
+    async bootstrap(initialToken: string | null = null) {
+      this.hydrate(initialToken)
 
       if (!this.token) {
         this.user = null
@@ -44773,13 +44762,16 @@ export const useAuthStore = defineStore('auth', {
         return await this.fetchMe()
       }
       catch {
-        this.logout()
+        this.user = null
+        this.token = null
+        this.loaded = true
         return null
       }
     },
+
     logout() {
       this.user = null
-      this.setToken(null)
+      this.token = null
       this.loaded = true
     },
   },
@@ -45621,16 +45613,16 @@ class AuditEvent(Base):
     actor_user_id = Column(String, nullable=True, index=True)
     actor_role_code = Column(String, nullable=True)
     action = Column(String, nullable=False, index=True)
-    resource_type = Column(String, nullable=False, index=True)
-    resource_id = Column(String, nullable=False, index=True)
+    entity_type = Column(String, nullable=False, index=True)
+    entity_id = Column(String, nullable=False, index=True)
     request_id = Column(String, nullable=True)
     ip_address = Column(String, nullable=True)
     user_agent = Column(String, nullable=True)
-    metadata_json = Column(Text, nullable=True)
-    details_json = Column(Text, nullable=True)
+    before_json = Column(Text, nullable=True)
+    after_json = Column(Text, nullable=True)
     justification = Column(Text, nullable=True)
     severity = Column(SQLEnum(Severity), default=Severity.INFO)
-    operational_scope = Column(String, nullable=True)
+    operational_scope = Column(Boolean, default=False)
     release_code = Column(String, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 </file>
@@ -46123,6 +46115,813 @@ async def get_my_settlements(
             "generated_at": b.generated_at,
             "paid_at": b.paid_at
         } for b in batches
+    ]
+</file>
+
+<file path="backend_api/app/routers/professional_self.py">
+import json
+import uuid
+from datetime import datetime, time
+from typing import Any, Dict, List, Optional
+
+from fastapi import APIRouter, Depends, HTTPException, status
+from pydantic import BaseModel, Field
+from sqlalchemy import and_, select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.core.database import get_db
+from app.core.dependencies import get_current_user
+from app.models.audit import AuditEvent, Severity
+from app.models.professional import Professional
+from app.models.step2_models import (
+    Appointment,
+    ProfessionalAvailability,
+    ProfessionalModality,
+    ProfessionalPublicProfile,
+    ProfessionalSpecialty,
+    ProfessionalTimeBlock,
+    ServiceModality,
+)
+from app.models.user import User
+
+router = APIRouter()
+
+VALID_SLOT_MINUTES = {15, 20, 30, 45, 60}
+DEFAULT_MODALITY_CODES = {"in_person_consultorio", "teleconsulta"}
+
+
+class ProfessionalPublicProfilePayload(BaseModel):
+    public_title: str = Field(..., min_length=3, max_length=120)
+    public_bio: Optional[str] = Field(default=None, max_length=3000)
+    consultation_price: Optional[float] = Field(default=None, ge=0, le=10000)
+    province: Optional[str] = Field(default=None, max_length=120)
+    city: Optional[str] = Field(default=None, max_length=120)
+    sector: Optional[str] = Field(default=None, max_length=120)
+    years_experience: Optional[int] = Field(default=None, ge=0, le=80)
+    languages_json: Optional[str] = Field(default=None, max_length=600)
+    is_public: bool = False
+
+
+class AvailabilityPayload(BaseModel):
+    weekday: int = Field(..., ge=0, le=6)
+    start_time: str = Field(..., min_length=5, max_length=8)
+    end_time: str = Field(..., min_length=5, max_length=8)
+    slot_minutes: int
+    modality_code: str = Field(..., min_length=2, max_length=80)
+
+
+class TimeBlockPayload(BaseModel):
+    starts_at: datetime
+    ends_at: datetime
+    reason: Optional[str] = Field(default=None, max_length=300)
+    block_type: str = Field(default="manual_block", min_length=2, max_length=80)
+
+
+def _normalize_hms(value: str) -> str:
+    raw = (value or "").strip()
+    if not raw:
+        raise HTTPException(status_code=400, detail="Time value is required")
+
+    parts = raw.split(":")
+    if len(parts) == 2:
+        hh, mm = parts
+        ss = "00"
+    elif len(parts) == 3:
+        hh, mm, ss = parts
+    else:
+        raise HTTPException(status_code=400, detail="Time must use HH:MM or HH:MM:SS format")
+
+    try:
+        hh_i = int(hh)
+        mm_i = int(mm)
+        ss_i = int(ss)
+        parsed = time(hh_i, mm_i, ss_i)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=f"Invalid time value: {raw}") from exc
+
+    return parsed.strftime("%H:%M:%S")
+
+
+def _parse_hms(value: str) -> time:
+    return time.fromisoformat(_normalize_hms(value))
+
+
+def _ranges_overlap(start_a: time, end_a: time, start_b: time, end_b: time) -> bool:
+    return start_a < end_b and start_b < end_a
+
+
+def _serialize_json(value: Any) -> Optional[str]:
+    if value is None:
+        return None
+    return json.dumps(value, default=str, ensure_ascii=False)
+
+
+async def _get_professional_or_404(db: AsyncSession, user_id: str) -> Professional:
+    result = await db.execute(
+        select(Professional).where(
+            Professional.user_id == user_id,
+            Professional.deleted_at.is_(None)
+        )
+    )
+    professional = result.scalar_one_or_none()
+    if not professional:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Su cuenta no tiene un perfil profesional asociado o el perfil fue eliminado."
+        )
+    return professional
+
+
+async def _log_professional_audit(
+    db: AsyncSession,
+    current_user: User,
+    action: str,
+    resource_type: str,
+    resource_id: str,
+    metadata: Optional[Dict[str, Any]] = None,
+    details: Optional[Dict[str, Any]] = None,
+) -> None:
+    event = AuditEvent(
+        id=str(uuid.uuid4()),
+        actor_user_id=str(current_user.id),
+        actor_role_code="professional",
+        action=action,
+        entity_type=resource_type,
+        entity_id=resource_id,
+        severity=Severity.INFO,
+        before_json=_serialize_json(metadata),
+        after_json=_serialize_json(details),
+        created_at=datetime.utcnow(),
+    )
+    db.add(event)
+    await db.flush()
+
+
+async def _resolve_allowed_modality_codes(
+    db: AsyncSession,
+    professional_id: str,
+) -> List[str]:
+    result = await db.execute(
+        select(ServiceModality.code)
+        .join(
+            ProfessionalModality,
+            ProfessionalModality.modality_id == ServiceModality.id,
+        )
+        .where(
+            ProfessionalModality.professional_id == professional_id,
+            ProfessionalModality.deleted_at.is_(None),
+            ServiceModality.is_active == True,
+        )
+    )
+    rows = [str(row[0]) for row in result.all()]
+
+    if rows:
+        return sorted(set(rows))
+
+    catalog_result = await db.execute(
+        select(ServiceModality.code).where(ServiceModality.is_active == True)
+    )
+    catalog_rows = [str(row[0]) for row in catalog_result.all()]
+    if catalog_rows:
+        return sorted(set(catalog_rows))
+
+    return sorted(DEFAULT_MODALITY_CODES)
+
+
+async def _ensure_modality_allowed(
+    db: AsyncSession,
+    professional_id: str,
+    modality_code: str,
+) -> None:
+    allowed_codes = await _resolve_allowed_modality_codes(db, professional_id)
+    if modality_code not in allowed_codes:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid modality_code '{modality_code}' for this professional",
+        )
+
+
+async def _validate_availability_payload(
+    db: AsyncSession,
+    professional_id: str,
+    payload: AvailabilityPayload,
+    exclude_id: Optional[str] = None,
+) -> Dict[str, Any]:
+    start_time_normalized = _normalize_hms(payload.start_time)
+    end_time_normalized = _normalize_hms(payload.end_time)
+
+    start_parsed = _parse_hms(start_time_normalized)
+    end_parsed = _parse_hms(end_time_normalized)
+
+    if start_parsed >= end_parsed:
+        raise HTTPException(status_code=400, detail="start_time must be earlier than end_time")
+
+    if payload.slot_minutes not in VALID_SLOT_MINUTES:
+        raise HTTPException(
+            status_code=400,
+            detail="slot_minutes must be one of: 15, 20, 30, 45, 60",
+        )
+
+    await _ensure_modality_allowed(db, professional_id, payload.modality_code)
+
+    existing_result = await db.execute(
+        select(ProfessionalAvailability).where(
+            ProfessionalAvailability.professional_id == professional_id,
+            ProfessionalAvailability.weekday == payload.weekday,
+            ProfessionalAvailability.deleted_at.is_(None),
+        )
+    )
+    existing_rows = existing_result.scalars().all()
+
+    for row in existing_rows:
+        if exclude_id and str(row.id) == str(exclude_id):
+            continue
+
+        row_start = _parse_hms(row.start_time)
+        row_end = _parse_hms(row.end_time)
+
+        if _ranges_overlap(start_parsed, end_parsed, row_start, row_end):
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=f"Cruce de horario detectado con otra disponibilidad ({row.start_time} - {row.end_time}, modalidad: {row.modality_code})",
+            )
+
+    return {
+        "start_time": start_time_normalized,
+        "end_time": end_time_normalized,
+    }
+
+
+async def _validate_time_block_payload(
+    db: AsyncSession,
+    professional_id: str,
+    payload: TimeBlockPayload,
+    exclude_id: Optional[str] = None,
+) -> None:
+    if payload.starts_at >= payload.ends_at:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="La fecha/hora de inicio debe ser anterior a la de fin."
+        )
+
+    # Check for overlaps with other time blocks
+    existing_result = await db.execute(
+        select(ProfessionalTimeBlock).where(
+            ProfessionalTimeBlock.professional_id == professional_id,
+            ProfessionalTimeBlock.deleted_at.is_(None),
+            ProfessionalTimeBlock.ends_at > payload.starts_at,
+            ProfessionalTimeBlock.starts_at < payload.ends_at,
+        )
+    )
+    existing_rows = existing_result.scalars().all()
+
+    for row in existing_rows:
+        if exclude_id and str(row.id) == str(exclude_id):
+            continue
+        
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"Ya existe un bloqueo en este rango ({row.starts_at} a {row.ends_at})."
+        )
+
+
+def _serialize_profile(professional: Professional, profile: Optional[ProfessionalPublicProfile]) -> Dict[str, Any]:
+    if not profile:
+        return {
+            "professional_id": str(professional.id),
+            "public_display_name": professional.public_display_name,
+            "public_title": "",
+            "public_bio": "",
+            "consultation_price": None,
+            "province": "",
+            "city": "",
+            "sector": "",
+            "years_experience": None,
+            "languages_json": "",
+            "is_public": False,
+            "professional_status": professional.status,
+            "onboarding_status": professional.onboarding_status,
+        }
+
+    return {
+        "id": str(profile.id),
+        "professional_id": str(profile.professional_id),
+        "public_display_name": professional.public_display_name,
+        "public_title": profile.public_title,
+        "public_bio": profile.public_bio,
+        "consultation_price": float(profile.consultation_price) if profile.consultation_price not in (None, "") else None,
+        "province": profile.province,
+        "city": profile.city,
+        "sector": profile.sector,
+        "years_experience": profile.years_experience,
+        "languages_json": profile.languages_json,
+        "is_public": bool(profile.is_public),
+        "professional_status": professional.status,
+        "onboarding_status": professional.onboarding_status,
+        "created_at": profile.created_at.isoformat() if profile.created_at else None,
+        "updated_at": profile.updated_at.isoformat() if profile.updated_at else None,
+    }
+
+
+def _serialize_availability(item: ProfessionalAvailability) -> Dict[str, Any]:
+    return {
+        "id": str(item.id),
+        "professional_id": str(item.professional_id),
+        "weekday": item.weekday,
+        "start_time": item.start_time,
+        "end_time": item.end_time,
+        "slot_minutes": item.slot_minutes,
+        "modality_code": item.modality_code,
+        "status": item.status,
+        "created_at": item.created_at.isoformat() if item.created_at else None,
+        "updated_at": item.updated_at.isoformat() if item.updated_at else None,
+    }
+
+
+def _serialize_time_block(item: ProfessionalTimeBlock) -> Dict[str, Any]:
+    return {
+        "id": str(item.id),
+        "professional_id": str(item.professional_id),
+        "starts_at": item.starts_at.isoformat() if item.starts_at else None,
+        "ends_at": item.ends_at.isoformat() if item.ends_at else None,
+        "reason": item.reason,
+        "block_type": item.block_type,
+        "created_at": item.created_at.isoformat() if item.created_at else None,
+        "updated_at": item.updated_at.isoformat() if item.updated_at else None,
+    }
+
+
+@router.get("/me/public-profile")
+async def get_my_public_profile(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    professional = await _get_professional_or_404(db, str(current_user.id))
+
+    profile_result = await db.execute(
+        select(ProfessionalPublicProfile).where(
+            ProfessionalPublicProfile.professional_id == professional.id
+        )
+    )
+    profile = profile_result.scalar_one_or_none()
+
+    return _serialize_profile(professional, profile)
+
+
+@router.put("/me/public-profile")
+async def update_my_public_profile(
+    data: ProfessionalPublicProfilePayload,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    professional = await _get_professional_or_404(db, str(current_user.id))
+
+    profile_result = await db.execute(
+        select(ProfessionalPublicProfile).where(
+            ProfessionalPublicProfile.professional_id == professional.id
+        )
+    )
+    profile = profile_result.scalar_one_or_none()
+
+    if not profile:
+        profile = ProfessionalPublicProfile(
+            professional_id=professional.id,
+            public_title=data.public_title,
+        )
+        db.add(profile)
+        await db.flush()
+
+    profile.public_title = data.public_title
+    profile.public_bio = data.public_bio
+    profile.consultation_price = (
+        f"{data.consultation_price:.2f}" if data.consultation_price is not None else None
+    )
+    profile.province = data.province
+    profile.city = data.city
+    profile.sector = data.sector
+    profile.years_experience = data.years_experience
+    profile.languages_json = data.languages_json
+    profile.is_public = data.is_public
+    profile.updated_at = datetime.utcnow()
+
+    await _log_professional_audit(
+        db=db,
+        current_user=current_user,
+        action="professional_public_profile_updated",
+        resource_type="professional_public_profile",
+        resource_id=str(profile.id),
+        metadata={
+            "professional_id": str(professional.id),
+            "is_public": data.is_public,
+        },
+        details=data.model_dump(),
+    )
+
+    await db.commit()
+    await db.refresh(profile)
+
+    return _serialize_profile(professional, profile)
+
+
+@router.get("/me/specialties")
+async def get_my_specialties(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    professional = await _get_professional_or_404(db, str(current_user.id))
+
+    result = await db.execute(
+        select(ProfessionalSpecialty).where(
+            ProfessionalSpecialty.professional_id == professional.id,
+            ProfessionalSpecialty.deleted_at.is_(None),
+        )
+    )
+    items = result.scalars().all()
+
+    return [
+        {
+            "id": str(item.id),
+            "professional_id": str(item.professional_id),
+            "specialty_id": str(item.specialty_id),
+            "is_primary": bool(item.is_primary),
+        }
+        for item in items
+    ]
+
+
+@router.get("/me/modalities")
+async def get_my_modalities(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    professional = await _get_professional_or_404(db, str(current_user.id))
+
+    result = await db.execute(
+        select(ServiceModality.id, ServiceModality.code, ServiceModality.name)
+        .join(
+            ProfessionalModality,
+            ProfessionalModality.modality_id == ServiceModality.id,
+        )
+        .where(
+            ProfessionalModality.professional_id == professional.id,
+            ProfessionalModality.deleted_at.is_(None),
+            ServiceModality.is_active == True,
+        )
+    )
+    rows = result.all()
+
+    if rows:
+        return [
+            {
+                "id": str(row[0]),
+                "code": str(row[1]),
+                "name": str(row[2]),
+            }
+            for row in rows
+        ]
+
+    fallback_result = await db.execute(
+        select(ServiceModality.id, ServiceModality.code, ServiceModality.name).where(
+            ServiceModality.is_active == True
+        )
+    )
+    fallback_rows = fallback_result.all()
+    if fallback_rows:
+        return [
+            {
+                "id": str(row[0]),
+                "code": str(row[1]),
+                "name": str(row[2]),
+            }
+            for row in fallback_rows
+        ]
+
+    return [
+        {"id": "fallback-in-person", "code": "in_person_consultorio", "name": "Consulta presencial"},
+        {"id": "fallback-tele", "code": "teleconsulta", "name": "Teleconsulta"},
+    ]
+
+
+@router.get("/me/availabilities")
+async def get_my_availabilities(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    professional = await _get_professional_or_404(db, str(current_user.id))
+
+    result = await db.execute(
+        select(ProfessionalAvailability)
+        .where(
+            ProfessionalAvailability.professional_id == professional.id,
+            ProfessionalAvailability.deleted_at.is_(None),
+        )
+        .order_by(
+            ProfessionalAvailability.weekday.asc(),
+            ProfessionalAvailability.start_time.asc(),
+        )
+    )
+    items = result.scalars().all()
+    return [_serialize_availability(item) for item in items]
+
+
+@router.post("/me/availabilities")
+async def create_availability(
+    data: AvailabilityPayload,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    professional = await _get_professional_or_404(db, str(current_user.id))
+    normalized = await _validate_availability_payload(db, str(professional.id), data)
+
+    item = ProfessionalAvailability(
+        professional_id=professional.id,
+        weekday=data.weekday,
+        start_time=normalized["start_time"],
+        end_time=normalized["end_time"],
+        slot_minutes=data.slot_minutes,
+        modality_code=data.modality_code,
+        status="active",
+        created_at=datetime.utcnow(),
+        updated_at=datetime.utcnow(),
+    )
+    db.add(item)
+    await db.flush()
+
+    await _log_professional_audit(
+        db=db,
+        current_user=current_user,
+        action="professional_availability_created",
+        resource_type="professional_availability",
+        resource_id=str(item.id),
+        metadata={"professional_id": str(professional.id)},
+        details=_serialize_availability(item),
+    )
+
+    await db.commit()
+    await db.refresh(item)
+
+    return _serialize_availability(item)
+
+
+@router.put("/me/availabilities/{availability_id}")
+async def update_availability(
+    availability_id: str,
+    data: AvailabilityPayload,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    professional = await _get_professional_or_404(db, str(current_user.id))
+
+    result = await db.execute(
+        select(ProfessionalAvailability).where(
+            ProfessionalAvailability.id == availability_id,
+            ProfessionalAvailability.professional_id == professional.id,
+            ProfessionalAvailability.deleted_at.is_(None),
+        )
+    )
+    item = result.scalar_one_or_none()
+    if not item:
+        raise HTTPException(status_code=404, detail="Availability not found")
+
+    normalized = await _validate_availability_payload(
+        db,
+        str(professional.id),
+        data,
+        exclude_id=availability_id,
+    )
+
+    item.weekday = data.weekday
+    item.start_time = normalized["start_time"]
+    item.end_time = normalized["end_time"]
+    item.slot_minutes = data.slot_minutes
+    item.modality_code = data.modality_code
+    item.status = "active"
+    item.updated_at = datetime.utcnow()
+
+    await _log_professional_audit(
+        db=db,
+        current_user=current_user,
+        action="professional_availability_updated",
+        resource_type="professional_availability",
+        resource_id=str(item.id),
+        metadata={"professional_id": str(professional.id)},
+        details=_serialize_availability(item),
+    )
+
+    await db.commit()
+    await db.refresh(item)
+
+    return _serialize_availability(item)
+
+
+@router.delete("/me/availabilities/{availability_id}")
+async def delete_availability(
+    availability_id: str,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    professional = await _get_professional_or_404(db, str(current_user.id))
+
+    result = await db.execute(
+        select(ProfessionalAvailability).where(
+            ProfessionalAvailability.id == availability_id,
+            ProfessionalAvailability.professional_id == professional.id,
+            ProfessionalAvailability.deleted_at.is_(None),
+        )
+    )
+    item = result.scalar_one_or_none()
+    if not item:
+        raise HTTPException(status_code=404, detail="Availability not found")
+
+    item.deleted_at = datetime.utcnow()
+    item.updated_at = datetime.utcnow()
+
+    await _log_professional_audit(
+        db=db,
+        current_user=current_user,
+        action="professional_availability_deleted",
+        resource_type="professional_availability",
+        resource_id=str(item.id),
+        metadata={"professional_id": str(professional.id)},
+        details={"deleted_at": item.deleted_at.isoformat()},
+    )
+
+    await db.commit()
+    return {"status": "deleted", "id": availability_id}
+
+
+@router.get("/me/time-blocks")
+async def get_my_time_blocks(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    professional = await _get_professional_or_404(db, str(current_user.id))
+
+    result = await db.execute(
+        select(ProfessionalTimeBlock)
+        .where(
+            ProfessionalTimeBlock.professional_id == professional.id,
+            ProfessionalTimeBlock.deleted_at.is_(None),
+        )
+        .order_by(ProfessionalTimeBlock.starts_at.desc())
+    )
+    items = result.scalars().all()
+    return [_serialize_time_block(item) for item in items]
+
+
+@router.post("/me/time-blocks")
+async def create_time_block(
+    data: TimeBlockPayload,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    professional = await _get_professional_or_404(db, str(current_user.id))
+    await _validate_time_block_payload(db, str(professional.id), data)
+
+    item = ProfessionalTimeBlock(
+        professional_id=professional.id,
+        starts_at=data.starts_at,
+        ends_at=data.ends_at,
+        reason=data.reason,
+        block_type=data.block_type,
+        created_at=datetime.utcnow(),
+        updated_at=datetime.utcnow(),
+    )
+    db.add(item)
+    await db.flush()
+
+    await _log_professional_audit(
+        db=db,
+        current_user=current_user,
+        action="professional_time_block_created",
+        resource_type="professional_time_block",
+        resource_id=str(item.id),
+        metadata={"professional_id": str(professional.id)},
+        details=_serialize_time_block(item),
+    )
+
+    await db.commit()
+    await db.refresh(item)
+
+    return _serialize_time_block(item)
+
+
+@router.put("/me/time-blocks/{block_id}")
+async def update_time_block(
+    block_id: str,
+    data: TimeBlockPayload,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    professional = await _get_professional_or_404(db, str(current_user.id))
+
+    result = await db.execute(
+        select(ProfessionalTimeBlock).where(
+            ProfessionalTimeBlock.id == block_id,
+            ProfessionalTimeBlock.professional_id == professional.id,
+            ProfessionalTimeBlock.deleted_at.is_(None),
+        )
+    )
+    item = result.scalar_one_or_none()
+    if not item:
+        raise HTTPException(status_code=404, detail="Time block not found")
+
+    await _validate_time_block_payload(db, str(professional.id), data, exclude_id=block_id)
+
+    item.starts_at = data.starts_at
+    item.ends_at = data.ends_at
+    item.reason = data.reason
+    item.block_type = data.block_type
+    item.updated_at = datetime.utcnow()
+
+    await _log_professional_audit(
+        db=db,
+        current_user=current_user,
+        action="professional_time_block_updated",
+        resource_type="professional_time_block",
+        resource_id=str(item.id),
+        metadata={"professional_id": str(professional.id)},
+        details=_serialize_time_block(item),
+    )
+
+    await db.commit()
+    await db.refresh(item)
+
+    return _serialize_time_block(item)
+
+
+@router.delete("/me/time-blocks/{block_id}")
+async def delete_time_block(
+    block_id: str,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    professional = await _get_professional_or_404(db, str(current_user.id))
+
+    result = await db.execute(
+        select(ProfessionalTimeBlock).where(
+            ProfessionalTimeBlock.id == block_id,
+            ProfessionalTimeBlock.professional_id == professional.id,
+            ProfessionalTimeBlock.deleted_at.is_(None),
+        )
+    )
+    item = result.scalar_one_or_none()
+    if not item:
+        raise HTTPException(status_code=404, detail="Time block not found")
+
+    item.deleted_at = datetime.utcnow()
+    item.updated_at = datetime.utcnow()
+
+    await _log_professional_audit(
+        db=db,
+        current_user=current_user,
+        action="professional_time_block_deleted",
+        resource_type="professional_time_block",
+        resource_id=str(item.id),
+        metadata={"professional_id": str(professional.id)},
+        details={"deleted_at": item.deleted_at.isoformat()},
+    )
+
+    await db.commit()
+    return {"status": "deleted", "id": block_id}
+
+
+@router.get("/me/appointments")
+async def get_my_appointments(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    professional = await _get_professional_or_404(db, str(current_user.id))
+
+    result = await db.execute(
+        select(Appointment)
+        .where(
+            Appointment.professional_id == professional.id,
+            Appointment.deleted_at.is_(None),
+        )
+        .order_by(Appointment.scheduled_start.desc())
+    )
+    items = result.scalars().all()
+
+    return [
+        {
+            "id": str(item.id),
+            "public_code": item.public_code,
+            "patient_id": str(item.patient_id),
+            "professional_id": str(item.professional_id),
+            "modality_code": item.modality_code,
+            "scheduled_start": item.scheduled_start.isoformat() if item.scheduled_start else None,
+            "scheduled_end": item.scheduled_end.isoformat() if item.scheduled_end else None,
+            "timezone": item.timezone,
+            "status": item.status,
+            "patient_note": item.patient_note,
+            "admin_note": item.admin_note,
+            "cancellation_reason": item.cancellation_reason,
+            "reschedule_reason": item.reschedule_reason,
+            "created_at": item.created_at.isoformat() if item.created_at else None,
+            "updated_at": item.updated_at.isoformat() if item.updated_at else None,
+        }
+        for item in items
     ]
 </file>
 
@@ -49090,6 +49889,628 @@ Ese es el paquete correcto para que el superusuario quede operativo **hasta dond
 Archivo revisado: [repomix_buscamedicos_full_ai.xml](sandbox:/mnt/data/repomix_buscamedicos_full_ai.xml)
 </file>
 
+<file path="web_frontend/composables/useApi.ts">
+import type {
+  AppointmentCreatePayload,
+  AppointmentCreatedResponse,
+  AppointmentSummary,
+  CheckoutResponse,
+  PaymentIntentResponse,
+  PaymentIntentConfirmResponse,
+  PaymentResponse,
+} from '~/types/appointment'
+import type {
+  ClinicalAccessLog,
+  ConsentCreatePayload,
+  ConsentResponse,
+  ExceptionalAccessRequestCreatePayload,
+  ExceptionalAccessRequestResponse,
+  PrivacyAuditorAccessLogsResponse,
+  PrivacyIncident,
+  PrivacyIncidentAssignPayload,
+  PrivacyIncidentCreatePayload,
+  PrivacyIncidentDismissPayload,
+  PrivacyIncidentResolvePayload,
+  PrivacyPolicyVersion,
+  PrivacyPolicyVersionCreatePayload,
+  ResourceAccessPolicy,
+  ResourceAccessPolicyUpdatePayload,
+  RetentionPolicy,
+  RetentionPolicyCreatePayload,
+} from '~/types/privacy'
+import type {
+  ProfessionalSearchFilters,
+  PublicProfessionalDetail,
+  PublicProfessionalListItem,
+  SlotItem,
+} from '~/types/professional'
+
+type ApiFetchOptions = {
+  method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
+  headers?: HeadersInit
+  body?: unknown
+}
+
+type AuditorLogFilters = {
+  actor_user_id?: string
+  patient_id?: string
+  resource_type?: string
+  from_date?: string
+  to_date?: string
+  limit?: number
+}
+
+type AdminPrivacyLogFilters = {
+  actor_user_id?: string
+  resource_type?: string
+  from_date?: string
+  to_date?: string
+}
+
+type AdminIncidentFilters = {
+  status_filter?: string
+  severity?: string
+}
+
+function normalizeHeaders(headers?: HeadersInit): Record<string, string> {
+  if (!headers) {
+    return {}
+  }
+
+  const resolvedHeaders = new Headers(headers)
+  return Object.fromEntries(resolvedHeaders.entries())
+}
+
+function cleanQuery(params: Record<string, unknown>) {
+  return Object.fromEntries(
+    Object.entries(params).filter(([, value]) => {
+      if (value === null || value === undefined) {
+        return false
+      }
+
+      if (typeof value === 'string') {
+        return value.trim().length > 0
+      }
+
+      return true
+    }),
+  )
+}
+
+function buildQueryString(params: Record<string, unknown>) {
+  const query = cleanQuery(params)
+  return new URLSearchParams(
+    Object.entries(query).reduce<Record<string, string>>((acc, [key, value]) => {
+      acc[key] = String(value)
+      return acc
+    }, {}),
+  ).toString()
+}
+
+export function useApi() {
+  const config = useRuntimeConfig()
+  const token = useCookie<string | null>('access_token')
+
+  async function apiFetch<T>(path: string, options: ApiFetchOptions = {}): Promise<T> {
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      ...normalizeHeaders(options.headers),
+    }
+
+    if (token.value) {
+      headers.Authorization = `Bearer ${token.value}`
+    }
+
+    return await $fetch<T>(`${config.public.apiBase}${path}`, {
+      method: options.method,
+      headers,
+      body: options.body,
+    })
+  }
+
+  async function searchProfessionals(
+    filters: ProfessionalSearchFilters = {},
+  ): Promise<PublicProfessionalListItem[]> {
+    const queryString = buildQueryString({
+      city: filters.city,
+      specialty: filters.specialty,
+      modality: filters.modality,
+      available_date: filters.available_date,
+    })
+
+    const path = queryString ? `/public/professionals?${queryString}` : '/public/professionals'
+    return await apiFetch<PublicProfessionalListItem[]>(path, { method: 'GET' })
+  }
+
+  async function getPublicProfessional(identifier: string): Promise<PublicProfessionalDetail> {
+    return await apiFetch<PublicProfessionalDetail>(
+      `/public/professionals/${encodeURIComponent(identifier)}`,
+      { method: 'GET' },
+    )
+  }
+
+  async function getSlots(
+    professionalId: string,
+    date: string,
+    modality: string,
+  ): Promise<SlotItem[]> {
+    const query = new URLSearchParams({
+      date,
+      modality,
+    }).toString()
+
+    return await apiFetch<SlotItem[]>(
+      `/public/professionals/${encodeURIComponent(professionalId)}/slots?${query}`,
+      { method: 'GET' },
+    )
+  }
+
+  async function createAppointment(
+    payload: AppointmentCreatePayload,
+  ): Promise<AppointmentCreatedResponse> {
+    return await apiFetch<AppointmentCreatedResponse>('/patient/appointments', {
+      method: 'POST',
+      body: payload,
+    })
+  }
+
+  async function getMyAppointments(): Promise<AppointmentSummary[]> {
+    return await apiFetch<AppointmentSummary[]>('/patient/appointments', {
+      method: 'GET',
+    })
+  }
+
+  async function getCheckout(appointmentId: string): Promise<CheckoutResponse> {
+    return await apiFetch<CheckoutResponse>(`/patient/appointments/${encodeURIComponent(appointmentId)}/checkout`, {
+      method: 'GET',
+    })
+  }
+
+  async function createPaymentIntent(
+    appointmentId: string,
+    idempotencyKey: string,
+  ): Promise<PaymentIntentResponse> {
+    return await apiFetch<PaymentIntentResponse>(
+      `/patient/appointments/${encodeURIComponent(appointmentId)}/payment-intent`,
+      {
+        method: 'POST',
+        body: { idempotency_key: idempotencyKey },
+      },
+    )
+  }
+
+  async function confirmSandboxPayment(intentId: string): Promise<PaymentIntentConfirmResponse> {
+    return await apiFetch<PaymentIntentConfirmResponse>(
+      `/patient/payment-intents/${encodeURIComponent(intentId)}/confirm-sandbox`,
+      { method: 'POST' },
+    )
+  }
+
+  async function failSandboxPayment(intentId: string): Promise<{ status: string }> {
+    return await apiFetch<{ status: string }>(
+      `/patient/payment-intents/${encodeURIComponent(intentId)}/fail-sandbox`,
+      { method: 'POST' },
+    )
+  }
+
+  async function getMyPayments(): Promise<PaymentResponse[]> {
+    return await apiFetch<PaymentResponse[]>('/patient/payments', {
+      method: 'GET',
+    })
+  }
+
+  async function getMyPayment(paymentId: string): Promise<PaymentResponse> {
+    return await apiFetch<PaymentResponse>(`/patient/payments/${encodeURIComponent(paymentId)}`, {
+      method: 'GET',
+    })
+  }
+
+  // Professional endpoints
+  async function getMyPrices(): Promise<{ id: string; modality_code: string; amount: number; currency_code: string; is_active: boolean }[]> {
+    return await apiFetch('/professionals/me/prices', { method: 'GET' })
+  }
+
+  async function updateMyPrice(
+    modalityCode: string,
+    amount: number,
+  ): Promise<{ id: string; modality_code: string; amount: number; currency_code: string; is_active: boolean }> {
+    return await apiFetch('/professionals/me/prices', {
+      method: 'PUT',
+      body: { modality_code: modalityCode, amount },
+    })
+  }
+
+  async function getPendingEarnings(): Promise<{
+    total_pending_gross: number
+    total_pending_commission: number
+    total_pending_net: number
+    currency_code: string
+    appointments_count: number
+  }> {
+    return await apiFetch('/professionals/me/earnings/pending', { method: 'GET' })
+  }
+
+  async function getMySettlements(): Promise<{
+    id: string
+    batch_code: string
+    total_gross: number
+    total_commission: number
+    total_net: number
+    currency_code: string
+    status: string
+    generated_at?: string | null
+    paid_at?: string | null
+  }[]> {
+    return await apiFetch('/professionals/me/earnings/settlements', { method: 'GET' })
+  }
+
+  async function getPatientConsents(): Promise<ConsentResponse[]> {
+    return await apiFetch<ConsentResponse[]>('/patient/privacy/consents', {
+      method: 'GET',
+    })
+  }
+
+  async function createPatientConsent(payload: ConsentCreatePayload): Promise<ConsentResponse> {
+    return await apiFetch<ConsentResponse>('/patient/privacy/consents', {
+      method: 'POST',
+      body: payload,
+    })
+  }
+
+  async function revokePatientConsent(consentId: string): Promise<ConsentResponse> {
+    return await apiFetch<ConsentResponse>(`/patient/privacy/consents/${encodeURIComponent(consentId)}/revoke`, {
+      method: 'POST',
+    })
+  }
+
+  async function getPatientPrivacyPolicies(): Promise<PrivacyPolicyVersion[]> {
+    return await apiFetch<PrivacyPolicyVersion[]>('/patient/privacy/policies/active', {
+      method: 'GET',
+    })
+  }
+
+  async function getPatientAccessLogs(): Promise<ClinicalAccessLog[]> {
+    return await apiFetch<ClinicalAccessLog[]>('/patient/privacy/access-log/me', {
+      method: 'GET',
+    })
+  }
+
+  async function createExceptionalAccessRequest(
+    payload: ExceptionalAccessRequestCreatePayload,
+  ): Promise<ExceptionalAccessRequestResponse> {
+    return await apiFetch<ExceptionalAccessRequestResponse>('/professionals/me/privacy/exceptional-access-requests', {
+      method: 'POST',
+      body: payload,
+    })
+  }
+
+  async function getProfessionalExceptionalAccessRequests(): Promise<ExceptionalAccessRequestResponse[]> {
+    return await apiFetch<ExceptionalAccessRequestResponse[]>('/professionals/me/privacy/exceptional-access-requests', {
+      method: 'GET',
+    })
+  }
+
+  async function getProfessionalAccessLogs(): Promise<ClinicalAccessLog[]> {
+    return await apiFetch<ClinicalAccessLog[]>('/professionals/me/privacy/access-log/me', {
+      method: 'GET',
+    })
+  }
+  
+  async function getProfessionalAppointments(): Promise<AppointmentSummary[]> {
+    return await apiFetch<AppointmentSummary[]>('/professionals/me/appointments', {
+      method: 'GET',
+    })
+  }
+
+  async function confirmAppointment(appointmentId: string): Promise<AppointmentSummary> {
+    return await apiFetch<AppointmentSummary>(`/professionals/me/appointments/${encodeURIComponent(appointmentId)}/confirm`, {
+      method: 'POST',
+    })
+  }
+
+  async function cancelAppointment(appointmentId: string, reason?: string): Promise<AppointmentSummary> {
+    return await apiFetch<AppointmentSummary>(`/professionals/me/appointments/${encodeURIComponent(appointmentId)}/cancel`, {
+      method: 'POST',
+      body: reason ? { reason } : undefined,
+    })
+  }
+
+  async function completeAppointment(appointmentId: string): Promise<AppointmentSummary> {
+    return await apiFetch<AppointmentSummary>(`/professionals/me/appointments/${encodeURIComponent(appointmentId)}/complete`, {
+      method: 'POST',
+    })
+  }
+
+  async function getPrivacyAuditorAccessLogs(
+    filters: AuditorLogFilters = {},
+  ): Promise<PrivacyAuditorAccessLogsResponse> {
+    const queryString = buildQueryString({
+      actor_user_id: filters.actor_user_id,
+      patient_id: filters.patient_id,
+      resource_type: filters.resource_type,
+      from_date: filters.from_date,
+      to_date: filters.to_date,
+      limit: filters.limit,
+    })
+
+    const path = queryString ? `/privacy-auditor/access-logs?${queryString}` : '/privacy-auditor/access-logs'
+    return await apiFetch<PrivacyAuditorAccessLogsResponse>(path, {
+      method: 'GET',
+    })
+  }
+
+  async function getAdminPrivacyPolicies(policyType?: string): Promise<PrivacyPolicyVersion[]> {
+    const queryString = buildQueryString({
+      policy_type: policyType,
+    })
+
+    const path = queryString ? `/admin/privacy/policies?${queryString}` : '/admin/privacy/policies'
+    return await apiFetch<PrivacyPolicyVersion[]>(path, {
+      method: 'GET',
+    })
+  }
+
+  async function createAdminPrivacyPolicy(
+    payload: PrivacyPolicyVersionCreatePayload,
+  ): Promise<PrivacyPolicyVersion> {
+    return await apiFetch<PrivacyPolicyVersion>('/admin/privacy/policies', {
+      method: 'POST',
+      body: payload,
+    })
+  }
+
+  async function publishAdminPrivacyPolicy(policyId: string): Promise<PrivacyPolicyVersion> {
+    return await apiFetch<PrivacyPolicyVersion>(`/admin/privacy/policies/${encodeURIComponent(policyId)}/publish`, {
+      method: 'POST',
+    })
+  }
+
+  async function getAdminPrivacyResourcePolicies(): Promise<ResourceAccessPolicy[]> {
+    return await apiFetch<ResourceAccessPolicy[]>('/admin/privacy/resource-policies', {
+      method: 'GET',
+    })
+  }
+
+  async function updateAdminPrivacyResourcePolicy(
+    resourceType: string,
+    payload: ResourceAccessPolicyUpdatePayload,
+  ): Promise<ResourceAccessPolicy> {
+    return await apiFetch<ResourceAccessPolicy>(`/admin/privacy/resource-policies/${encodeURIComponent(resourceType)}`, {
+      method: 'PUT',
+      body: payload,
+    })
+  }
+
+  async function getAdminPrivacyAccessLogs(
+    filters: AdminPrivacyLogFilters = {},
+  ): Promise<ClinicalAccessLog[]> {
+    const queryString = buildQueryString({
+      actor_user_id: filters.actor_user_id,
+      resource_type: filters.resource_type,
+      from_date: filters.from_date,
+      to_date: filters.to_date,
+    })
+
+    const path = queryString ? `/admin/privacy/access-logs?${queryString}` : '/admin/privacy/access-logs'
+    return await apiFetch<ClinicalAccessLog[]>(path, {
+      method: 'GET',
+    })
+  }
+
+  async function exportAdminPrivacyAccessLogsMeta(
+    filters: AdminPrivacyLogFilters = {},
+  ): Promise<ClinicalAccessLog[]> {
+    const queryString = buildQueryString({
+      actor_user_id: filters.actor_user_id,
+      resource_type: filters.resource_type,
+      from_date: filters.from_date,
+      to_date: filters.to_date,
+    })
+
+    const path = queryString
+      ? `/admin/privacy/access-logs/export-meta?${queryString}`
+      : '/admin/privacy/access-logs/export-meta'
+
+    return await apiFetch<ClinicalAccessLog[]>(path, {
+      method: 'GET',
+    })
+  }
+
+  async function getAdminPrivacyRetentionPolicies(): Promise<RetentionPolicy[]> {
+    return await apiFetch<RetentionPolicy[]>('/admin/privacy/retention-policies', {
+      method: 'GET',
+    })
+  }
+
+  async function createAdminPrivacyRetentionPolicy(
+    payload: RetentionPolicyCreatePayload,
+  ): Promise<RetentionPolicy> {
+    return await apiFetch<RetentionPolicy>('/admin/privacy/retention-policies', {
+      method: 'POST',
+      body: payload,
+    })
+  }
+
+  async function updateAdminPrivacyRetentionPolicy(
+    policyId: string,
+    payload: RetentionPolicyCreatePayload,
+  ): Promise<RetentionPolicy> {
+    return await apiFetch<RetentionPolicy>(`/admin/privacy/retention-policies/${encodeURIComponent(policyId)}`, {
+      method: 'PUT',
+      body: payload,
+    })
+  }
+
+  async function getAdminPrivacyIncidents(
+    filters: AdminIncidentFilters = {},
+  ): Promise<PrivacyIncident[]> {
+    const queryString = buildQueryString({
+      status_filter: filters.status_filter,
+      severity: filters.severity,
+    })
+
+    const path = queryString ? `/admin/privacy/incidents?${queryString}` : '/admin/privacy/incidents'
+    return await apiFetch<PrivacyIncident[]>(path, {
+      method: 'GET',
+    })
+  }
+
+  async function createAdminPrivacyIncident(
+    payload: PrivacyIncidentCreatePayload,
+  ): Promise<PrivacyIncident> {
+    return await apiFetch<PrivacyIncident>('/admin/privacy/incidents', {
+      method: 'POST',
+      body: payload,
+    })
+  }
+
+  async function assignAdminPrivacyIncident(
+    incidentId: string,
+    payload: PrivacyIncidentAssignPayload,
+  ): Promise<PrivacyIncident> {
+    return await apiFetch<PrivacyIncident>(`/admin/privacy/incidents/${encodeURIComponent(incidentId)}/assign`, {
+      method: 'POST',
+      body: payload,
+    })
+  }
+
+  async function containAdminPrivacyIncident(
+    incidentId: string,
+  ): Promise<PrivacyIncident> {
+    return await apiFetch<PrivacyIncident>(`/admin/privacy/incidents/${encodeURIComponent(incidentId)}/contain`, {
+      method: 'POST',
+    })
+  }
+
+  async function resolveAdminPrivacyIncident(
+    incidentId: string,
+    payload: PrivacyIncidentResolvePayload,
+  ): Promise<PrivacyIncident> {
+    return await apiFetch<PrivacyIncident>(`/admin/privacy/incidents/${encodeURIComponent(incidentId)}/resolve`, {
+      method: 'POST',
+      body: payload,
+    })
+  }
+
+  async function dismissAdminPrivacyIncident(
+    incidentId: string,
+    payload: PrivacyIncidentDismissPayload,
+  ): Promise<PrivacyIncident> {
+    return await apiFetch<PrivacyIncident>(`/admin/privacy/incidents/${encodeURIComponent(incidentId)}/dismiss`, {
+      method: 'POST',
+      body: payload,
+    })
+  }
+
+  return {
+    apiFetch,
+    searchProfessionals,
+    getPublicProfessional,
+    getSlots,
+    createAppointment,
+    getMyAppointments,
+    getCheckout,
+    createPaymentIntent,
+    confirmSandboxPayment,
+    failSandboxPayment,
+    getMyPayments,
+    getMyPayment,
+    getMyPrices,
+    updateMyPrice,
+    getPendingEarnings,
+    getMySettlements,
+    getPatientConsents,
+    createPatientConsent,
+    revokePatientConsent,
+    getPatientPrivacyPolicies,
+    getPatientAccessLogs,
+    createExceptionalAccessRequest,
+    getProfessionalExceptionalAccessRequests,
+    getProfessionalAccessLogs,
+    getProfessionalAppointments,
+    confirmAppointment,
+    cancelAppointment,
+    completeAppointment,
+    getPrivacyAuditorAccessLogs,
+    getAdminPrivacyPolicies,
+    createAdminPrivacyPolicy,
+    publishAdminPrivacyPolicy,
+    getAdminPrivacyResourcePolicies,
+    updateAdminPrivacyResourcePolicy,
+    getAdminPrivacyAccessLogs,
+    exportAdminPrivacyAccessLogsMeta,
+    getAdminPrivacyRetentionPolicies,
+    createAdminPrivacyRetentionPolicy,
+    updateAdminPrivacyRetentionPolicy,
+    getAdminPrivacyIncidents,
+    createAdminPrivacyIncident,
+    assignAdminPrivacyIncident,
+    containAdminPrivacyIncident,
+    resolveAdminPrivacyIncident,
+    dismissAdminPrivacyIncident,
+  }
+}
+</file>
+
+<file path="web_frontend/layouts/professional.vue">
+<script setup lang="ts">
+const authStore = useAuthStore()
+const { syncAccessToken } = useAuth()
+
+const links = [
+  { title: 'Dashboard', to: '/professional/dashboard', icon: 'mdi-view-dashboard' },
+  { title: 'Agenda', to: '/professional/agenda', icon: 'mdi-calendar-clock' },
+  { title: 'Citas', to: '/professional/appointments', icon: 'mdi-calendar-account' },
+  { title: 'Precios', to: '/professional/prices', icon: 'mdi-cash-multiple' },
+  { title: 'Ganancias', to: '/professional/earnings', icon: 'mdi-chart-line' },
+  { title: 'Teleconsulta', to: '/professional/teleconsultation/demo-appointment', icon: 'mdi-video' },
+  { title: 'Privacidad', to: '/professional/privacy/access-logs', icon: 'mdi-file-shield' },
+]
+
+async function handleLogout() {
+  syncAccessToken(null)
+  authStore.logout()
+  await navigateTo('/login')
+}
+</script>
+
+<template>
+  <v-app>
+    <v-navigation-drawer permanent color="blue-grey-darken-4">
+      <v-list bg-color="blue-grey-darken-4" density="comfortable" nav>
+        <v-list-item title="Panel profesional" subtitle="BuscaMedicos" />
+        <v-divider class="my-2" />
+        <v-list-item
+          v-for="link in links"
+          :key="link.to"
+          :prepend-icon="link.icon"
+          :title="link.title"
+          :to="link.to"
+          rounded="lg"
+        />
+      </v-list>
+    </v-navigation-drawer>
+
+    <v-main class="bg-blue-grey-lighten-5">
+      <v-container class="py-8">
+        <div class="d-flex justify-space-between align-center mb-6">
+          <div>
+            <h1 class="text-h5 font-weight-bold">Profesional</h1>
+            <p class="text-body-2 text-medium-emphasis mb-0">
+              {{ authStore.user?.email ?? 'Sesion activa' }}
+            </p>
+          </div>
+          <v-btn color="primary" variant="outlined" @click="handleLogout">
+            Cerrar sesion
+          </v-btn>
+        </div>
+        <slot />
+      </v-container>
+    </v-main>
+  </v-app>
+</template>
+</file>
+
 <file path="web_frontend/pages/admin/moderation/cases.vue">
 <script setup lang="ts">
 definePageMeta({
@@ -49165,251 +50586,65 @@ definePageMeta({
 </template>
 </file>
 
-<file path="web_frontend/pages/professional/appointments.vue">
+<file path="web_frontend/pages/professional/dashboard.vue">
 <script setup lang="ts">
-import { useApi } from '~/composables/useApi'
-import type { AppointmentSummary } from '~/types/appointment'
-
 definePageMeta({
   layout: 'professional',
   middleware: ['auth', 'role'],
   roles: ['professional'],
 })
 
-const { getProfessionalAppointments, confirmAppointment, cancelAppointment, completeAppointment } = useApi()
-
-const appointments = ref<AppointmentSummary[]>([])
-const loading = ref(true)
-const tab = ref(0)
-const error = ref('')
-
-const fetchAppointments = async () => {
-  loading.value = true
-  error.value = ''
-  try {
-    appointments.value = await getProfessionalAppointments()
-  } catch (err: any) {
-    error.value = 'No se pudieron cargar las citas. Por favor, reintente.'
-    console.error(err)
-  } finally {
-    loading.value = false
-  }
-}
-
-const handleConfirm = async (id: string) => {
-  try {
-    await confirmAppointment(id)
-    await fetchAppointments()
-  } catch (err) {
-    alert('Error al confirmar la cita.')
-  }
-}
-
-const handleCancel = async (id: string) => {
-  const reason = prompt('Motivo de la cancelación (opcional):')
-  if (reason === null) return
-  try {
-    await cancelAppointment(id, reason)
-    await fetchAppointments()
-  } catch (err) {
-    alert('Error al cancelar la cita.')
-  }
-}
-
-const handleComplete = async (id: string) => {
-  if (!confirm('¿Seguro que desea marcar esta cita como completada?')) return
-  try {
-    await completeAppointment(id)
-    await fetchAppointments()
-  } catch (err) {
-    alert('Error al completar la cita.')
-  }
-}
-
-onMounted(fetchAppointments)
-
-const filteredAppointments = computed(() => {
-  if (tab.value === 0) {
-    return appointments.value.filter(a => ['pending_confirmation', 'confirmed'].includes(a.status))
-  } else if (tab.value === 1) {
-    return appointments.value.filter(a => a.status === 'completed')
-  } else {
-    return appointments.value.filter(a => a.status.startsWith('cancelled') || a.status.startsWith('no_show'))
-  }
-})
-
-function getStatusColor(status: string) {
-  switch (status) {
-    case 'confirmed': return 'success'
-    case 'pending_confirmation': return 'warning'
-    case 'completed': return 'info'
-    case 'cancelled_by_patient':
-    case 'cancelled_by_professional': return 'error'
-    default: return 'grey'
-  }
-}
-
-function getStatusText(status: string) {
-  switch (status) {
-    case 'confirmed': return 'Confirmada'
-    case 'pending_confirmation': return 'Pendiente'
-    case 'completed': return 'Completada'
-    case 'cancelled_by_patient': return 'Cancelada (Paciente)'
-    case 'cancelled_by_professional': return 'Cancelada (Usted)'
-    case 'no_show_patient': return 'No asistió (Paciente)'
-    case 'no_show_professional': return 'No asistió (Usted)'
-    default: return status
-  }
-}
-
-function formatDate(dateStr: string) {
-  const date = new Date(dateStr)
-  return date.toLocaleDateString('es-EC', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
-}
-
-function formatTime(dateStr: string) {
-  const date = new Date(dateStr)
-  return date.toLocaleTimeString('es-EC', { hour: '2-digit', minute: '2-digit' })
-}
+const cards = [
+  {
+    title: 'Perfil y agenda',
+    text: 'Configura nombre público, perfil visible, horarios semanales y bloqueos puntuales para habilitar reservas reales.',
+    to: '/professional/agenda',
+    icon: 'mdi-calendar-clock-outline',
+  },
+  {
+    title: 'Citas',
+    text: 'Revisa agenda, estados y seguimiento clínico inicial.',
+    to: '/professional/appointments',
+    icon: 'mdi-calendar-account',
+  },
+  {
+    title: 'Precios',
+    text: 'Administra valores operativos por modalidad para el flujo económico.',
+    to: '/professional/prices',
+    icon: 'mdi-cash-multiple',
+  },
+  {
+    title: 'Teleconsulta',
+    text: 'Prepara el acceso a sesiones virtuales y herramientas clínicas.',
+    to: '/professional/teleconsultation/demo-appointment',
+    icon: 'mdi-video-outline',
+  },
+  {
+    title: 'Privacidad',
+    text: 'Consulta accesos y solicita acceso excepcional cuando aplique.',
+    to: '/professional/privacy/access-logs',
+    icon: 'mdi-file-lock-outline',
+  },
+]
 </script>
 
 <template>
-  <v-container>
-    <div class="d-flex align-center mb-6">
-      <div>
-        <h1 class="text-h4 font-weight-bold mb-1">Agenda Profesional</h1>
-        <p class="text-subtitle-1 text-medium-emphasis">Gestiona tus próximas citas y revisa tu historial clínico.</p>
-      </div>
-      <v-spacer></v-spacer>
-      <v-btn
-        icon="mdi-refresh"
-        variant="tonal"
-        :loading="loading"
-        @click="fetchAppointments"
-      ></v-btn>
-    </div>
-
-    <v-tabs v-model="tab" color="primary" align-tabs="start" class="mb-6">
-      <v-tab :value="0">Activas</v-tab>
-      <v-tab :value="1">Completadas</v-tab>
-      <v-tab :value="2">Historial / Cancelaciones</v-tab>
-    </v-tabs>
-
-    <div v-if="loading" class="text-center py-12">
-      <v-progress-circular indeterminate color="primary" size="64"></v-progress-circular>
-    </div>
-
-    <div v-else-if="error" class="mb-6">
-      <v-alert type="error" variant="tonal" closable>
-        {{ error }}
-      </v-alert>
-    </div>
-
-    <div v-else-if="filteredAppointments.length === 0" class="text-center py-12">
-      <v-icon size="64" color="grey-lighten-1">mdi-calendar-blank</v-icon>
-      <p class="text-h6 text-medium-emphasis mt-4">No hay citas en esta sección.</p>
-    </div>
-
-    <v-row v-else>
-      <v-col v-for="apt in filteredAppointments" :key="apt.id" cols="12">
-        <v-card rounded="xl" elevation="2" class="mb-2">
-          <v-row no-gutters>
-            <v-col cols="12" md="3" class="bg-blue-lighten-5 d-flex flex-column justify-center align-center py-4 px-2">
-              <div class="text-h5 font-weight-black text-primary">{{ formatTime(apt.scheduled_start) }}</div>
-              <div class="text-caption text-uppercase font-weight-bold">{{ formatDate(apt.scheduled_start) }}</div>
-            </v-col>
-            <v-col cols="12" md="9">
-              <v-card-item>
-                <template v-slot:prepend>
-                   <v-avatar color="primary" rounded="lg">
-                     <v-icon color="white">mdi-account</v-icon>
-                   </v-avatar>
-                </template>
-                <v-card-title class="d-flex align-center">
-                  Cita #{{ apt.public_code || apt.id.slice(0, 8) }}
-                  <v-spacer></v-spacer>
-                  <v-chip :color="getStatusColor(apt.status)" size="small" variant="flat" class="text-uppercase font-weight-bold">
-                    {{ getStatusText(apt.status) }}
-                  </v-chip>
-                </v-card-title>
-                <v-card-subtitle>
-                  Modalidad: {{ apt.modality_code === 'teleconsulta' ? '💻 Teleconsulta' : '🏥 Presencial' }}
-                </v-card-subtitle>
-              </v-card-item>
-
-              <v-card-text v-if="apt.patient_note" class="text-body-2 italic py-0">
-                <v-icon size="small" class="mr-1">mdi-note-text-outline</v-icon>
-                "{{ apt.patient_note }}"
-              </v-card-text>
-
-              <v-card-actions class="pa-4 pt-2">
-                <v-btn
-                  v-if="apt.status === 'pending_confirmation'"
-                  color="success"
-                  variant="flat"
-                  rounded="lg"
-                  prepend-icon="mdi-check"
-                  @click="handleConfirm(apt.id)"
-                >
-                  Confirmar
-                </v-btn>
-
-                <v-btn
-                  v-if="apt.status === 'confirmed'"
-                  color="info"
-                  variant="tonal"
-                  rounded="lg"
-                  prepend-icon="mdi-video"
-                  :to="`/professional/teleconsultation/${apt.id}`"
-                  :disabled="apt.modality_code !== 'teleconsulta'"
-                >
-                  Iniciar Consulta
-                </v-btn>
-
-                <v-spacer></v-spacer>
-
-                <v-btn
-                  v-if="apt.status === 'confirmed'"
-                  color="success"
-                  variant="outlined"
-                  rounded="lg"
-                  @click="handleComplete(apt.id)"
-                >
-                   Finalizar
-                </v-btn>
-
-                <v-btn
-                  v-if="['pending_confirmation', 'confirmed'].includes(apt.status)"
-                  color="error"
-                  variant="text"
-                  rounded="lg"
-                  @click="handleCancel(apt.id)"
-                >
-                  Cancelar
-                </v-btn>
-
-                <v-btn
-                  variant="plain"
-                  rounded="lg"
-                  icon="mdi-dots-vertical"
-                ></v-btn>
-              </v-card-actions>
-            </v-col>
-          </v-row>
-        </v-card>
-      </v-col>
-    </v-row>
-  </v-container>
+  <v-row>
+    <v-col v-for="card in cards" :key="card.to" cols="12" md="6" lg="4">
+      <v-card class="h-100" rounded="xl">
+        <v-card-item :prepend-icon="card.icon">
+          <v-card-title>{{ card.title }}</v-card-title>
+        </v-card-item>
+        <v-card-text>{{ card.text }}</v-card-text>
+        <v-card-actions>
+          <v-btn :to="card.to" color="primary" variant="tonal">
+            Abrir
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-col>
+  </v-row>
 </template>
-
-<style scoped>
-.v-card {
-  transition: transform 0.2s ease-in-out;
-}
-.v-card:hover {
-  transform: translateY(-2px);
-}
-</style>
 </file>
 
 <file path="backend_api/app/models/__init__.py">
@@ -49933,83 +51168,251 @@ async def update_me(
     return current_user
 </file>
 
-<file path="infra/docker-compose.yml">
-version: "3.9"
+<file path="web_frontend/pages/professional/appointments.vue">
+<script setup lang="ts">
+import { useApi } from '~/composables/useApi'
+import type { AppointmentSummary } from '~/types/appointment'
 
-services:
-  postgres:
-    image: postgres:16-alpine
-    container_name: buscamedicos_postgres
-    environment:
-      POSTGRES_DB: ${POSTGRES_DB:-buscamedicos}
-      POSTGRES_USER: ${POSTGRES_USER:-buscamedicos}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-buscamedicos123}
-    ports:
-      - "${POSTGRES_PORT:-5432}:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-buscamedicos} -d ${POSTGRES_DB:-buscamedicos}"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+definePageMeta({
+  layout: 'professional',
+  middleware: ['auth', 'role'],
+  roles: ['professional'],
+})
 
-  backend_api:
-    build:
-      context: ../backend_api
-      dockerfile: Dockerfile
-    container_name: buscamedicos_backend
-    environment:
-      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-buscamedicos}:${POSTGRES_PASSWORD:-buscamedicos123}@postgres:5432/${POSTGRES_DB:-buscamedicos}
-      SECRET_KEY: ${SECRET_KEY:-dev-secret-key-buscamedicos}
-      REDIS_URL: ${REDIS_URL:-}
-    ports:
-      - "${BACKEND_PORT:-8000}:8000"
-    depends_on:
-      postgres:
-        condition: service_healthy
-    volumes:
-      - ../backend_api:/app
-      - files_data:/app/files
+const { getProfessionalAppointments, confirmAppointment, cancelAppointment, completeAppointment } = useApi()
 
-  backend_seed:
-    build:
-      context: ../backend_api
-      dockerfile: Dockerfile
-    container_name: buscamedicos_backend_seed
-    environment:
-      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-buscamedicos}:${POSTGRES_PASSWORD:-buscamedicos123}@postgres:5432/${POSTGRES_DB:-buscamedicos}
-      SECRET_KEY: ${SECRET_KEY:-dev-secret-key-buscamedicos}
-    depends_on:
-      postgres:
-        condition: service_healthy
-    command: ["sh", "-c", "alembic upgrade head && python -m scripts.seed"]
-    volumes:
-      - ../backend_api:/app
+const appointments = ref<AppointmentSummary[]>([])
+const loading = ref(true)
+const tab = ref(0)
+const error = ref('')
 
-  web_frontend:
-    build:
-      context: ../web_frontend
-      dockerfile: Dockerfile.dev
-    container_name: buscamedicos_web_frontend
-    environment:
-      NUXT_PUBLIC_API_BASE: http://localhost:8000/api/v1
-      HOST: 0.0.0.0
-      PORT: 3000
-      NODE_ENV: development
-    ports:
-      - "3000:3000"
-    volumes:
-      - ../web_frontend:/app
-      - web_frontend_node_modules:/app/node_modules
-    depends_on:
-      - backend_api
-    restart: unless-stopped
+const fetchAppointments = async () => {
+  loading.value = true
+  error.value = ''
+  try {
+    appointments.value = await getProfessionalAppointments()
+  } catch (err: any) {
+    error.value = 'No se pudieron cargar las citas. Por favor, reintente.'
+    console.error(err)
+  } finally {
+    loading.value = false
+  }
+}
 
-volumes:
-  postgres_data:
-  files_data:
-  web_frontend_node_modules:
+const handleConfirm = async (id: string) => {
+  try {
+    await confirmAppointment(id)
+    await fetchAppointments()
+  } catch (err) {
+    alert('Error al confirmar la cita.')
+  }
+}
+
+const handleCancel = async (id: string) => {
+  const reason = prompt('Motivo de la cancelación (opcional):')
+  if (reason === null) return
+  try {
+    await cancelAppointment(id, reason)
+    await fetchAppointments()
+  } catch (err) {
+    alert('Error al cancelar la cita.')
+  }
+}
+
+const handleComplete = async (id: string) => {
+  if (!confirm('¿Seguro que desea marcar esta cita como completada?')) return
+  try {
+    await completeAppointment(id)
+    await fetchAppointments()
+  } catch (err) {
+    alert('Error al completar la cita.')
+  }
+}
+
+onMounted(fetchAppointments)
+
+const filteredAppointments = computed(() => {
+  if (tab.value === 0) {
+    return appointments.value.filter(a => ['pending_confirmation', 'confirmed'].includes(a.status))
+  } else if (tab.value === 1) {
+    return appointments.value.filter(a => a.status === 'completed')
+  } else {
+    return appointments.value.filter(a => a.status.startsWith('cancelled') || a.status.startsWith('no_show'))
+  }
+})
+
+function getStatusColor(status: string) {
+  switch (status) {
+    case 'confirmed': return 'success'
+    case 'pending_confirmation': return 'warning'
+    case 'completed': return 'info'
+    case 'cancelled_by_patient':
+    case 'cancelled_by_professional': return 'error'
+    default: return 'grey'
+  }
+}
+
+function getStatusText(status: string) {
+  switch (status) {
+    case 'confirmed': return 'Confirmada'
+    case 'pending_confirmation': return 'Pendiente'
+    case 'completed': return 'Completada'
+    case 'cancelled_by_patient': return 'Cancelada (Paciente)'
+    case 'cancelled_by_professional': return 'Cancelada (Usted)'
+    case 'no_show_patient': return 'No asistió (Paciente)'
+    case 'no_show_professional': return 'No asistió (Usted)'
+    default: return status
+  }
+}
+
+function formatDate(dateStr: string) {
+  const date = new Date(dateStr)
+  return date.toLocaleDateString('es-EC', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
+}
+
+function formatTime(dateStr: string) {
+  const date = new Date(dateStr)
+  return date.toLocaleTimeString('es-EC', { hour: '2-digit', minute: '2-digit' })
+}
+</script>
+
+<template>
+  <v-container>
+    <div class="d-flex align-center mb-6">
+      <div>
+        <h1 class="text-h4 font-weight-bold mb-1">Agenda Profesional</h1>
+        <p class="text-subtitle-1 text-medium-emphasis">Gestiona tus próximas citas y revisa tu historial clínico.</p>
+      </div>
+      <v-spacer></v-spacer>
+      <v-btn
+        icon="mdi-refresh"
+        variant="tonal"
+        :loading="loading"
+        @click="fetchAppointments"
+      ></v-btn>
+    </div>
+
+    <v-tabs v-model="tab" color="primary" align-tabs="start" class="mb-6">
+      <v-tab :value="0">Activas</v-tab>
+      <v-tab :value="1">Completadas</v-tab>
+      <v-tab :value="2">Historial / Cancelaciones</v-tab>
+    </v-tabs>
+
+    <div v-if="loading" class="text-center py-12">
+      <v-progress-circular indeterminate color="primary" size="64"></v-progress-circular>
+    </div>
+
+    <div v-else-if="error" class="mb-6">
+      <v-alert type="error" variant="tonal" closable>
+        {{ error }}
+      </v-alert>
+    </div>
+
+    <div v-else-if="filteredAppointments.length === 0" class="text-center py-12">
+      <v-icon size="64" color="grey-lighten-1">mdi-calendar-blank</v-icon>
+      <p class="text-h6 text-medium-emphasis mt-4">No hay citas en esta sección.</p>
+    </div>
+
+    <v-row v-else>
+      <v-col v-for="apt in filteredAppointments" :key="apt.id" cols="12">
+        <v-card rounded="xl" elevation="2" class="mb-2">
+          <v-row no-gutters>
+            <v-col cols="12" md="3" class="bg-blue-lighten-5 d-flex flex-column justify-center align-center py-4 px-2">
+              <div class="text-h5 font-weight-black text-primary">{{ formatTime(apt.scheduled_start) }}</div>
+              <div class="text-caption text-uppercase font-weight-bold">{{ formatDate(apt.scheduled_start) }}</div>
+            </v-col>
+            <v-col cols="12" md="9">
+              <v-card-item>
+                <template v-slot:prepend>
+                   <v-avatar color="primary" rounded="lg">
+                     <v-icon color="white">mdi-account</v-icon>
+                   </v-avatar>
+                </template>
+                <v-card-title class="d-flex align-center">
+                  Cita #{{ apt.public_code || apt.id.slice(0, 8) }}
+                  <v-spacer></v-spacer>
+                  <v-chip :color="getStatusColor(apt.status)" size="small" variant="flat" class="text-uppercase font-weight-bold">
+                    {{ getStatusText(apt.status) }}
+                  </v-chip>
+                </v-card-title>
+                <v-card-subtitle>
+                  Modalidad: {{ apt.modality_code === 'teleconsulta' ? '💻 Teleconsulta' : '🏥 Presencial' }}
+                </v-card-subtitle>
+              </v-card-item>
+
+              <v-card-text v-if="apt.patient_note" class="text-body-2 italic py-0">
+                <v-icon size="small" class="mr-1">mdi-note-text-outline</v-icon>
+                "{{ apt.patient_note }}"
+              </v-card-text>
+
+              <v-card-actions class="pa-4 pt-2">
+                <v-btn
+                  v-if="apt.status === 'pending_confirmation'"
+                  color="success"
+                  variant="flat"
+                  rounded="lg"
+                  prepend-icon="mdi-check"
+                  @click="handleConfirm(apt.id)"
+                >
+                  Confirmar
+                </v-btn>
+
+                <v-btn
+                  v-if="apt.status === 'confirmed'"
+                  color="info"
+                  variant="tonal"
+                  rounded="lg"
+                  prepend-icon="mdi-video"
+                  :to="`/professional/teleconsultation/${apt.id}`"
+                  :disabled="apt.modality_code !== 'teleconsulta'"
+                >
+                  Iniciar Consulta
+                </v-btn>
+
+                <v-spacer></v-spacer>
+
+                <v-btn
+                  v-if="apt.status === 'confirmed'"
+                  color="success"
+                  variant="outlined"
+                  rounded="lg"
+                  @click="handleComplete(apt.id)"
+                >
+                   Finalizar
+                </v-btn>
+
+                <v-btn
+                  v-if="['pending_confirmation', 'confirmed'].includes(apt.status)"
+                  color="error"
+                  variant="text"
+                  rounded="lg"
+                  @click="handleCancel(apt.id)"
+                >
+                  Cancelar
+                </v-btn>
+
+                <v-btn
+                  variant="plain"
+                  rounded="lg"
+                  icon="mdi-dots-vertical"
+                ></v-btn>
+              </v-card-actions>
+            </v-col>
+          </v-row>
+        </v-card>
+      </v-col>
+    </v-row>
+  </v-container>
+</template>
+
+<style scoped>
+.v-card {
+  transition: transform 0.2s ease-in-out;
+}
+.v-card:hover {
+  transform: translateY(-2px);
+}
+</style>
 </file>
 
 <file path="backend_api/scripts/seed.py">
@@ -50669,6 +52072,85 @@ async def seed():
 
 if __name__ == "__main__":
     asyncio.run(seed())
+</file>
+
+<file path="infra/docker-compose.yml">
+version: "3.9"
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: buscamedicos_postgres
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-buscamedicos}
+      POSTGRES_USER: ${POSTGRES_USER:-buscamedicos}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-buscamedicos123}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-buscamedicos} -d ${POSTGRES_DB:-buscamedicos}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend_api:
+    build:
+      context: ../backend_api
+      dockerfile: Dockerfile
+    container_name: buscamedicos_backend
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-buscamedicos}:${POSTGRES_PASSWORD:-buscamedicos123}@postgres:5432/${POSTGRES_DB:-buscamedicos}
+      SECRET_KEY: ${SECRET_KEY:-dev-secret-key-buscamedicos}
+      REDIS_URL: ${REDIS_URL:-}
+    ports:
+      - "${BACKEND_PORT:-8000}:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ../backend_api:/app
+      - files_data:/app/files
+
+  backend_seed:
+    build:
+      context: ../backend_api
+      dockerfile: Dockerfile
+    container_name: buscamedicos_backend_seed
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-buscamedicos}:${POSTGRES_PASSWORD:-buscamedicos123}@postgres:5432/${POSTGRES_DB:-buscamedicos}
+      SECRET_KEY: ${SECRET_KEY:-dev-secret-key-buscamedicos}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: ["sh", "-c", "alembic upgrade head && python -m scripts.seed"]
+    volumes:
+      - ../backend_api:/app
+
+  web_frontend:
+    build:
+      context: ../web_frontend
+      dockerfile: Dockerfile.dev
+    container_name: buscamedicos_web_frontend
+    environment:
+      NUXT_PUBLIC_API_BASE: http://localhost:8000/api/v1
+      HOST: 0.0.0.0
+      PORT: 3000
+      NODE_ENV: development
+    ports:
+      - "3000:3000"
+    volumes:
+      - ../web_frontend:/app
+      - web_frontend_node_modules:/app/node_modules
+    depends_on:
+      - backend_api
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  files_data:
+  web_frontend_node_modules:
 </file>
 
 </files>

@@ -27,6 +27,8 @@ services:
       DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-buscamedicos}:${POSTGRES_PASSWORD:-buscamedicos123}@postgres:5432/${POSTGRES_DB:-buscamedicos}
       SECRET_KEY: ${SECRET_KEY:-dev-secret-key-buscamedicos}
       REDIS_URL: ${REDIS_URL:-}
+      FILES_PATH: /app/files
+      MAX_FILE_SIZE_MB: 10
     ports:
       - "${BACKEND_PORT:-8000}:8000"
     depends_on:

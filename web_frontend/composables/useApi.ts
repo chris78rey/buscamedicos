@@ -32,6 +32,10 @@ import type {
   PublicProfessionalListItem,
   SlotItem,
 } from '~/types/professional'
+import type {
+  AdminVerificationRequest,
+  AdminVerificationRequestDetail,
+} from '~/types/verification'
 
 type ApiFetchOptions = {
   method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
@@ -100,8 +104,11 @@ export function useApi() {
   const token = useCookie<string | null>('access_token')
 
   async function apiFetch<T>(path: string, options: ApiFetchOptions = {}): Promise<T> {
+    const isFormData = options.body instanceof FormData
+    const baseHeaders: Record<string, string> = isFormData ? {} : { 'Content-Type': 'application/json' }
+
     const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
+      ...baseHeaders,
       ...normalizeHeaders(options.headers),
     }
 
@@ -113,6 +120,41 @@ export function useApi() {
       method: options.method,
       headers,
       body: options.body,
+    })
+  }
+
+  // Professional Me & Documents
+  async function getProfessionalMe(): Promise<any> {
+    return await apiFetch('/professionals/me', { method: 'GET' })
+  }
+
+  async function updateProfessionalMe(payload: any): Promise<any> {
+    return await apiFetch('/professionals/me', {
+      method: 'PATCH',
+      body: payload,
+    })
+  }
+
+  async function getProfessionalVerificationStatus(): Promise<any> {
+    return await apiFetch('/professionals/me/verification-status', { method: 'GET' })
+  }
+
+  async function uploadProfessionalDocument(formData: FormData): Promise<any> {
+    return await apiFetch('/professionals/me/documents', {
+      method: 'POST',
+      body: formData,
+    })
+  }
+
+  async function deleteProfessionalDocument(documentId: string): Promise<any> {
+    return await apiFetch(`/professionals/me/documents/${encodeURIComponent(documentId)}`, {
+      method: 'DELETE',
+    })
+  }
+
+  async function submitProfessionalVerification(): Promise<any> {
+    return await apiFetch('/professionals/me/submit-verification', {
+      method: 'POST',
     })
   }
 
@@ -510,9 +552,79 @@ export function useApi() {
     })
   }
 
+  // Admin verification endpoints
+  async function getAdminVerificationRequests(): Promise<AdminVerificationRequest[]> {
+    return await apiFetch<AdminVerificationRequest[]>('/admin/verification-requests', { method: 'GET' })
+  }
+
+  async function getAdminVerificationRequest(requestId: string): Promise<AdminVerificationRequestDetail> {
+    return await apiFetch<AdminVerificationRequestDetail>(`/admin/verification-requests/${encodeURIComponent(requestId)}`, { method: 'GET' })
+  }
+
+  async function assignAdminVerificationRequest(requestId: string): Promise<{ status: string; admin_id: string }> {
+    return await apiFetch<{ status: string; admin_id: string }>(`/admin/verification-requests/${encodeURIComponent(requestId)}/assign`, { method: 'POST' })
+  }
+
+  async function approveAdminVerificationDocument(
+    requestId: string,
+    documentId: string,
+    notes?: string,
+  ): Promise<{ status: string; document_id: string }> {
+    return await apiFetch<{ status: string; document_id: string }>(
+      `/admin/verification-requests/${encodeURIComponent(requestId)}/documents/${encodeURIComponent(documentId)}/approve`,
+      { method: 'POST', body: notes ? { notes } : undefined },
+    )
+  }
+
+  async function rejectAdminVerificationDocument(
+    requestId: string,
+    documentId: string,
+    reason: string,
+  ): Promise<{ status: string; document_id: string; reason: string }> {
+    return await apiFetch<{ status: string; document_id: string; reason: string }>(
+      `/admin/verification-requests/${encodeURIComponent(requestId)}/documents/${encodeURIComponent(documentId)}/reject`,
+      { method: 'POST', body: { reason } },
+    )
+  }
+
+  async function approveAdminVerification(requestId: string): Promise<{ status: string; professional_status: string }> {
+    return await apiFetch<{ status: string; professional_status: string }>(
+      `/admin/verification-requests/${encodeURIComponent(requestId)}/approve`,
+      { method: 'POST' },
+    )
+  }
+
+  async function rejectAdminVerification(
+    requestId: string,
+    reason: string,
+  ): Promise<{ status: string; reason: string }> {
+    return await apiFetch<{ status: string; reason: string }>(
+      `/admin/verification-requests/${encodeURIComponent(requestId)}/reject`,
+      { method: 'POST', body: { reason } },
+    )
+  }
+
+  async function requestCorrectionAdminVerification(
+    requestId: string,
+    reason: string,
+  ): Promise<{ status: string; reason: string }> {
+    return await apiFetch<{ status: string; reason: string }>(
+      `/admin/verification-requests/${encodeURIComponent(requestId)}/request-correction`,
+      { method: 'POST', body: { reason } },
+    )
+  }
+
   return {
     apiFetch,
     searchProfessionals,
+    getAdminVerificationRequests,
+    getAdminVerificationRequest,
+    assignAdminVerificationRequest,
+    approveAdminVerificationDocument,
+    rejectAdminVerificationDocument,
+    approveAdminVerification,
+    rejectAdminVerification,
+    requestCorrectionAdminVerification,
     getPublicProfessional,
     getSlots,
     createAppointment,
@@ -539,6 +651,12 @@ export function useApi() {
     confirmAppointment,
     cancelAppointment,
     completeAppointment,
+    getProfessionalMe,
+    updateProfessionalMe,
+    getProfessionalVerificationStatus,
+    uploadProfessionalDocument,
+    deleteProfessionalDocument,
+    submitProfessionalVerification,
     getPrivacyAuditorAccessLogs,
     getAdminPrivacyPolicies,
     createAdminPrivacyPolicy,

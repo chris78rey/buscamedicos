@@ -410,12 +410,12 @@ class PatientConsentService:
     async def _audit_consent(self, patient_id: str, consent_type: str, action: str, user_id: str):
         event = AuditEvent(
             id=str(uuid.uuid4()),
-            user_id=user_id,
+            actor_user_id=user_id,
             action=action,
-            resource_type="patient_privacy_consent",
-            resource_id=patient_id,
+            entity_type="patient_privacy_consent",
+            entity_id=patient_id,
             severity=Severity.INFO,
-            metadata_json=json.dumps({"consent_type": consent_type}),
+            before_json=json.dumps({"consent_type": consent_type}),
             created_at=datetime.utcnow()
         )
         self.db.add(event)
@@ -634,12 +634,12 @@ class ExceptionalAccessRequestService:
     async def _audit_request(self, req: ExceptionalAccessRequest, action: str, user_id: str):
         event = AuditEvent(
             id=str(uuid.uuid4()),
-            user_id=user_id,
+            actor_user_id=user_id,
             action=action,
-            resource_type="exceptional_access_request",
-            resource_id=req.id,
+            entity_type="exceptional_access_request",
+            entity_id=req.id,
             severity=Severity.INFO,
-            metadata_json=json.dumps({
+            before_json=json.dumps({
                 "resource_type": req.resource_type,
                 "status": req.status,
                 "patient_id": req.patient_id
@@ -651,12 +651,12 @@ class ExceptionalAccessRequestService:
     async def _audit_grant(self, grant: ExceptionalAccessGrant, action: str, user_id: str, reason: str):
         event = AuditEvent(
             id=str(uuid.uuid4()),
-            user_id=user_id,
+            actor_user_id=user_id,
             action=action,
-            resource_type="exceptional_access_grant",
-            resource_id=grant.id,
+            entity_type="exceptional_access_grant",
+            entity_id=grant.id,
             severity=Severity.INFO,
-            metadata_json=json.dumps({
+            before_json=json.dumps({
                 "resource_type": grant.resource_type,
                 "reason": reason
             }),

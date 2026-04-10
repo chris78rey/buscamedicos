@@ -45,12 +45,12 @@ class ModerationAuditService:
         from app.models.audit import AuditEvent, Severity
         event = AuditEvent(
             id=str(uuid.uuid4()),
-            user_id=actor_user_id,
+            actor_user_id=actor_user_id,
             action=action,
-            resource_type=resource_type,
-            resource_id=resource_id,
+            entity_type=resource_type,
+            entity_id=resource_id,
             severity=Severity.INFO,
-            metadata_json=json.dumps(metadata) if metadata else None,
+            before_json=json.dumps(metadata) if metadata else None,
             ip_address=None,
             user_agent=None,
             created_at=datetime.utcnow()

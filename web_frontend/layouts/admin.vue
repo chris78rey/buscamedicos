@@ -1,14 +1,17 @@
 <script setup lang="ts">
 const authStore = useAuthStore()
+const { syncAccessToken } = useAuth()
 
 const links = [
   { title: 'Dashboard', to: '/admin/dashboard', icon: 'mdi-view-dashboard' },
+  { title: 'Validaciones', to: '/admin/verification', icon: 'mdi-clipboard-check' },
   { title: 'Privacidad', to: '/admin/privacy/access-logs', icon: 'mdi-shield-search' },
   { title: 'Moderacion', to: '/admin/moderation/cases', icon: 'mdi-gavel' },
   { title: 'Pagos', to: '/admin/payments/settlements', icon: 'mdi-cash-multiple' },
 ]
 
 async function handleLogout() {
+  syncAccessToken(null)
   authStore.logout()
   await navigateTo('/login')
 }
