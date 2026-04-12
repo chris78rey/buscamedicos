@@ -83,10 +83,35 @@ const slotMinuteOptions = [15, 20, 30, 45, 60].map(value => ({
 
 function resolveError(error: unknown, fallback: string) {
   if (error instanceof FetchError) {
-    return error.data?.detail?.toString() || fallback
+    const detail = error.data?.detail
+
+    if (typeof detail === 'string' && detail.trim()) {
+      return detail
+    }
+
+    if (Array.isArray(detail) && detail.length > 0) {
+      return detail
+        .map((item: any) => item?.msg || JSON.stringify(item))
+        .join(' | ')
+    }
+
+    const status = error.response?.status
+    if (status === 404) {
+      return 'No existe perfil profesional asociado a este usuario.'
+    }
+    if (status === 409) {
+      return 'La disponibilidad se traslapa con otra ya registrada.'
+    }
+    if (status === 422) {
+      return 'Los datos enviados no cumplen el formato esperado por el backend.'
+    }
+
+    return fallback
   }
+
   return fallback
 }
+
 
 function clearMessages() {
   errorMessage.value = ''
@@ -137,6 +162,42 @@ function resetTimeBlockForm() {
   editingBlockId.value = null
 }
 
+async function loadModalities() {
+  try {
+    const items = await getMyModalities()
+
+    if (Array.isArray(items) && items.length > 0) {
+      modalityOptions.value = items
+
+      const exists = items.some(item => item.code === availabilityForm.modality_code)
+      if (!exists) {
+        availabilityForm.modality_code = items[0]?.code || 'teleconsulta'
+      }
+
+      return
+    }
+
+    modalityOptions.value = [
+      { id: 'fallback-1', code: 'in_person_consultorio', name: 'Consulta en consultorio' },
+      { id: 'fallback-2', code: 'teleconsulta', name: 'Teleconsulta' },
+    ]
+
+    if (!availabilityForm.modality_code) {
+      availabilityForm.modality_code = modalityOptions.value[0].code
+    }
+  }
+  catch {
+    modalityOptions.value = [
+      { id: 'fallback-1', code: 'in_person_consultorio', name: 'Consulta en consultorio' },
+      { id: 'fallback-2', code: 'teleconsulta', name: 'Teleconsulta' },
+    ]
+
+    if (!availabilityForm.modality_code) {
+      availabilityForm.modality_code = modalityOptions.value[0].code
+    }
+  }
+}
+
 async function loadAll() {
   loadingAll.value = true
   clearMessages()
@@ -145,20 +206,15 @@ async function loadAll() {
     const [
       availabilityRows,
       blockRows,
-      modalityRows,
     ] = await Promise.all([
       getMyAvailabilities(),
       getMyTimeBlocks(),
-      getMyModalities().catch(() => modalityOptions.value),
     ])
 
     availabilities.value = availabilityRows
     timeBlocks.value = blockRows
-    modalityOptions.value = modalityRows.length ? modalityRows : modalityOptions.value
 
-    if (!availabilityForm.modality_code && modalityOptions.value.length) {
-      availabilityForm.modality_code = modalityOptions.value[0].code
-    }
+    await loadModalities()
   }
   catch (error: unknown) {
     errorMessage.value = resolveError(error, 'No se pudo cargar la configuración operativa del profesional.')
@@ -168,10 +224,50 @@ async function loadAll() {
   }
 }
 
+function isValidTimeRange(startTime: string, endTime: string) {
+  return Boolean(startTime) && Boolean(endTime) && startTime < endTime
+}
+
+function hasValidSlotMinutes(value: number) {
+  return [15, 20, 30, 45, 60].includes(Number(value))
+}
+
+function hasValidWeekday(value: number) {
+  return Number.isInteger(Number(value)) && Number(value) >= 0 && Number(value) <= 6
+}
+
+
 
 async function handleSaveAvailability() {
+  errorMessage.value = ''
+  successMessage.value = ''
+
+  if (!hasValidWeekday(Number(availabilityForm.weekday))) {
+    errorMessage.value = 'El día seleccionado no es válido.'
+    return
+  }
+
+  if (!hasValidSlotMinutes(Number(availabilityForm.slot_minutes))) {
+    errorMessage.value = 'La duración del slot debe ser 15, 20, 30, 45 o 60 minutos.'
+    return
+  }
+
+  if (!isValidTimeRange(availabilityForm.start_time, availabilityForm.end_time)) {
+    errorMessage.value = 'La hora de inicio debe ser menor que la hora de fin.'
+    return
+  }
+
+  const modalityExists = modalityOptions.value.some(
+    item => item.code === availabilityForm.modality_code,
+  )
+
+  if (!modalityExists) {
+    errorMessage.value = 'La modalidad seleccionada no existe para este profesional.'
+    return
+  }
+
   savingAvailability.value = true
-  clearMessages()
+
 
   try {
     const payload = {

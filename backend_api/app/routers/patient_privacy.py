@@ -12,7 +12,8 @@ from app.schemas.step7_schemas import (
     ClinicalAccessLogResponse,
 )
 
-router = APIRouter(prefix="/patient/privacy", tags=["patient-privacy"])
+router = APIRouter(prefix="/privacy", tags=["patient-privacy"])
+
 
 
 @router.get("/consents", response_model=List[ConsentResponse])

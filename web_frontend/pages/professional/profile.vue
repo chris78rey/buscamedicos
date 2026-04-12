@@ -5,6 +5,7 @@ definePageMeta({
   roles: ['professional'],
 })
 
+const config = useRuntimeConfig()
 const { 
   getProfessionalMe, 
   updateProfessionalMe, 
@@ -31,12 +32,27 @@ const verificationStatus = ref<any>(null)
 const documents = ref<any[]>([])
 
 const docTypes = [
+  { title: 'Cédula (Frente)', value: 'national_id_front' },
+  { title: 'Cédula (Reverso)', value: 'national_id_back' },
   { title: 'Título / Diploma', value: 'degree' },
-  { title: 'Especialidad', value: 'specialty_cert' },
-  { title: 'Identificación', value: 'national_id' },
-  { title: 'Seguro Malpraxis', value: 'malpractice_insurance' },
-  { title: 'Otro', value: 'other' },
+  { title: 'Certificado de Registro', value: 'registration_certificate' },
+  { title: 'Selfie de verificación', value: 'selfie_verification' },
+  { title: 'Hoja de vida', value: 'cv' },
+  { title: 'Acuerdo firmado', value: 'signed_agreement' },
+  { title: 'Documento de respaldo', value: 'supporting_document' },
 ]
+
+const documentTypeLabels: Record<string, string> = {
+  national_id_front: 'Cédula (Frente)',
+  national_id_back: 'Cédula (Reverso)',
+  degree: 'Título / Diploma',
+  registration_certificate: 'Certificado de Registro',
+  selfie_verification: 'Selfie de verificación',
+  cv: 'Hoja de vida',
+  signed_agreement: 'Acuerdo firmado',
+  supporting_document: 'Documento de respaldo',
+}
+
 
 const selectedDocType = ref('degree')
 const fileToUpload = ref<File | null>(null)
@@ -51,10 +67,11 @@ async function loadData() {
     profile.value = {
       public_display_name: me.public_display_name || '',
       professional_type: me.professional_type || '',
-      public_bio: me.public_bio || '',
+      public_bio: me.bio_public || '',
       years_experience: me.years_experience || 0,
       languages: me.languages || [],
     }
+
     verificationStatus.value = status
     documents.value = status.documents || []
   } catch (e) {
@@ -67,7 +84,14 @@ async function loadData() {
 async function saveProfile() {
   saving.value = true
   try {
-    await updateProfessionalMe(profile.value)
+    await updateProfessionalMe({
+      public_display_name: profile.value.public_display_name,
+      professional_type: profile.value.professional_type,
+      bio_public: profile.value.public_bio,
+      years_experience: profile.value.years_experience,
+      languages: profile.value.languages,
+    })
+
     // Refresh data
     await loadData()
   } catch (e) {
@@ -123,26 +147,55 @@ onMounted(() => {
   loadData()
 })
 
-function getStatusColor(status: string) {
+function getStatusColor(status: string | null | undefined) {
   switch (status) {
-    case 'approved': return 'success'
-    case 'rejected': return 'error'
-    case 'pending': return 'warning'
-    case 'correction_requested': return 'info'
-    default: return 'grey'
+    case 'approved':
+      return 'success'
+    case 'rejected':
+      return 'error'
+    case 'submitted':
+    case 'under_review':
+    case 'pending':
+      return 'warning'
+    case 'needs_correction':
+      return 'info'
+    case 'draft':
+      return 'grey'
+    case 'suspended':
+      return 'error'
+    default:
+      return 'grey'
   }
 }
 
-function getStatusText(status: string) {
+
+function getStatusText(status: string | null | undefined) {
   switch (status) {
-    case 'approved': return 'Aprobado'
-    case 'rejected': return 'Rechazado'
-    case 'pending': return 'Pendiente'
-    case 'correction_requested': return 'Corrección requerida'
-    case 'draft': return 'Borrador'
-    default: return status
+    case 'approved':
+      return 'Aprobado'
+    case 'rejected':
+      return 'Rechazado'
+    case 'submitted':
+      return 'Enviado'
+    case 'under_review':
+      return 'En revisión'
+    case 'pending':
+      return 'Pendiente'
+    case 'needs_correction':
+      return 'Corrección requerida'
+    case 'draft':
+      return 'Borrador'
+    case 'suspended':
+      return 'Suspendido'
+    case null:
+    case undefined:
+    case '':
+      return 'Sin enviar'
+    default:
+      return status
   }
 }
+
 </script>
 
 <template>
@@ -256,7 +309,8 @@ function getStatusText(status: string) {
             </v-alert>
 
             <v-btn
-              v-if="['draft', 'correction_requested', null].includes(verificationStatus.request_status)"
+              v-if="[null, 'needs_correction', 'rejected'].includes(verificationStatus.request_status)"
+
               color="success"
               block
               :loading="submitting"
@@ -334,7 +388,8 @@ function getStatusText(status: string) {
             </thead>
             <tbody>
               <tr v-for="doc in documents" :key="doc.id">
-                <td>{{ docTypes.find(t => t.value === doc.document_type)?.title || doc.document_type }}</td>
+                <td>{{ documentTypeLabels[doc.document_type] || doc.document_type }}</td>
+
                 <td>{{ doc.original_filename }}</td>
                 <td>
                   <v-chip :color="getStatusColor(doc.review_status)" size="x-small">
@@ -348,7 +403,8 @@ function getStatusText(status: string) {
                     variant="text"
                     size="small"
                     color="primary"
-                    :href="doc.download_url"
+                    :href="config.public.apiBase + doc.download_url"
+
                     target="_blank"
                   ></v-btn>
                   <v-btn

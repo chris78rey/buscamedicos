@@ -13,7 +13,8 @@ from app.schemas.step7_schemas import (
     ClinicalAccessLogResponse,
 )
 
-router = APIRouter(prefix="/professionals/me/privacy", tags=["professional-privacy"])
+router = APIRouter(prefix="/me/privacy", tags=["professional-privacy"])
+
 
 
 @router.post("/exceptional-access-requests", response_model=ExceptionalAccessRequestResponse)

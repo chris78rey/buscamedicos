@@ -4,28 +4,74 @@ definePageMeta({
   middleware: ['auth', 'role'],
   roles: ['super_admin', 'admin_support'],
 })
+
+const cards = [
+  {
+    title: 'Lotes pendientes',
+    value: '0',
+    subtitle: 'A la espera de generación',
+    icon: 'mdi-cash-clock',
+  },
+  {
+    title: 'Lotes pagados',
+    value: '0',
+    subtitle: 'Historial disponible luego',
+    icon: 'mdi-cash-check',
+  },
+  {
+    title: 'Total neto',
+    value: '$0.00',
+    subtitle: 'Valor referencial placeholder',
+    icon: 'mdi-currency-usd',
+  },
+]
 </script>
 
 <template>
   <v-container>
-    <h1 class="text-h4 font-weight-bold mb-2">Liquidaciones (Settlements)</h1>
-    <p class="text-subtitle-1 text-medium-emphasis mb-6">Conciliación de pagos y transferencias a profesionales de la salud.</p>
+    <div class="d-flex align-center justify-space-between flex-wrap ga-4 mb-6">
+      <div>
+        <h1 class="text-h4 font-weight-bold mb-2">Liquidaciones</h1>
+        <p class="text-subtitle-1 text-medium-emphasis">
+          Base mínima para conciliación y pagos a profesionales.
+        </p>
+      </div>
+
+      <v-chip color="warning" variant="flat">
+        Placeholder funcional
+      </v-chip>
+    </div>
 
     <v-row>
-      <v-col cols="12" md="4" v-for="title in ['Total Pendiente', 'Enviado a banco', 'Comisiones BM']" :key="title">
-        <v-card rounded="xl" elevation="2" class="pa-4">
-          <div class="text-overline mb-1">{{ title }}</div>
-          <div class="text-h4 font-weight-bold">$0.00</div>
-          <div class="text-caption text-success">Corte actual</div>
+      <v-col
+        v-for="card in cards"
+        :key="card.title"
+        cols="12"
+        md="4"
+      >
+        <v-card rounded="xl" elevation="2" class="h-100">
+          <v-card-item>
+            <template #prepend>
+              <v-avatar color="primary" variant="tonal">
+                <v-icon>{{ card.icon }}</v-icon>
+              </v-avatar>
+            </template>
+            <v-card-title>{{ card.title }}</v-card-title>
+            <v-card-subtitle>{{ card.subtitle }}</v-card-subtitle>
+          </v-card-item>
+
+          <v-card-text class="text-h4 font-weight-bold">
+            {{ card.value }}
+          </v-card-text>
         </v-card>
       </v-col>
     </v-row>
 
     <v-card rounded="xl" elevation="2" class="mt-6">
-      <v-card-text class="text-center py-12">
-        <v-icon size="48" color="primary" class="mb-2">mdi-cash-clock</v-icon>
-        <div class="text-h6">Módulo Financiero en espera</div>
-        <p class="text-body-2 text-medium-emphasis">Las liquidaciones automáticas se procesan los días lunes.</p>
+      <v-card-title>Alcance pendiente</v-card-title>
+      <v-card-text>
+        Esta vista debe enlazarse después con generación de lotes, consulta de ítems,
+        confirmación de pago y trazabilidad de estados.
       </v-card-text>
     </v-card>
   </v-container>

@@ -24,7 +24,8 @@ from app.schemas.step7_schemas import (
     PrivacyIncidentResolve, PrivacyIncidentContain, PrivacyIncidentDismiss,
 )
 
-router = APIRouter(prefix="/admin/privacy", tags=["admin-privacy"])
+router = APIRouter(prefix="/privacy", tags=["admin-privacy"])
+
 
 
 def _req_response(req) -> ExceptionalAccessRequestResponse:

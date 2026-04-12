@@ -7,20 +7,33 @@ from app.core.database import get_db
 from app.core.dependencies import get_current_user
 from app.models.file import File
 from app.models.user import User
+from app.models.role import Role, UserRole, UserRoleStatus
 from app.services.file_storage_service import FileStorageService
 
 router = APIRouter(tags=["files"])
 
 
-def _can_access_file(user: User, file_record: File) -> bool:
-    if user.id == file_record.owner_user_id:
+async def _can_access_file(
+    user: User,
+    file_record: File,
+    db: AsyncSession,
+) -> bool:
+    if str(user.id) == str(file_record.owner_user_id):
         return True
-    try:
-        role_codes = [r.code for r in user.roles]
-    except Exception:
-        role_codes = []
+
+    result = await db.execute(
+        select(Role.code)
+        .join(UserRole, UserRole.role_id == Role.id)
+        .where(
+            UserRole.user_id == user.id,
+            UserRole.status == UserRoleStatus.ACTIVE,
+        )
+    )
+    role_codes = [str(row[0]) for row in result.all()]
+
     if any(r in role_codes for r in ["super_admin", "admin_validation"]):
         return True
+
     return False
 
 
@@ -39,7 +52,7 @@ async def get_file_metadata(
     if file_record.deleted_at:
         raise HTTPException(status_code=404, detail="File not found")
     
-    if not _can_access_file(current_user, file_record):
+    if not await _can_access_file(current_user, file_record, db):
         raise HTTPException(status_code=403, detail="Access denied")
     
     storage = FileStorageService()
@@ -71,7 +84,7 @@ async def download_file(
     if file_record.deleted_at:
         raise HTTPException(status_code=404, detail="File not found")
     
-    if not _can_access_file(current_user, file_record):
+    if not await _can_access_file(current_user, file_record, db):
         raise HTTPException(status_code=403, detail="Access denied")
     
     storage = FileStorageService()
@@ -84,4 +97,6 @@ async def download_file(
         path=str(file_path),
         filename=file_record.original_filename,
         media_type=file_record.mime_type,
+        content_disposition_type="inline",
     )
+

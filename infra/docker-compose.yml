@@ -17,6 +17,12 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
 
   backend_api:
     build:
@@ -37,6 +43,12 @@ services:
     volumes:
       - ../backend_api:/app
       - files_data:/app/files
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
 
   backend_seed:
     build:
@@ -52,6 +64,12 @@ services:
     command: ["sh", "-c", "alembic upgrade head && python -m scripts.seed"]
     volumes:
       - ../backend_api:/app
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
 
   web_frontend:
     build:
@@ -71,6 +89,12 @@ services:
     depends_on:
       - backend_api
     restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
 
 volumes:
   postgres_data:

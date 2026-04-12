@@ -39,6 +39,16 @@ class VerificationRequestListItem(BaseModel):
     rejected_count: int
 
 
+class ReasonPayload(BaseModel):
+    reason: str
+
+
+class ApprovePayload(BaseModel):
+    notes: Optional[str] = None
+
+
+
+
 class DocumentResponse(BaseModel):
     id: str
     professional_id: str
@@ -155,7 +165,8 @@ async def _create_verification_event(
 
 
 def _download_url(file_id: str) -> str:
-    return f"/api/v1/files/{file_id}/download"
+    return f"/files/{file_id}/download"
+
 
 
 @router.get("", response_model=List[VerificationRequestListItem])
@@ -324,10 +335,12 @@ async def assign_verification(
 async def approve_document(
     request_id: str,
     document_id: str,
-    notes: Optional[str] = None,
+    payload: ApprovePayload,
     current_user: User = Depends(require_role([RoleCode.ADMIN_VALIDATION, RoleCode.SUPER_ADMIN])),
     db: AsyncSession = Depends(get_db),
 ):
+    notes = payload.notes
+
     verification = await _get_verification_or_404(db, request_id)
 
     document = await _get_document_or_404(db, document_id)
@@ -370,10 +383,12 @@ async def approve_document(
 async def reject_document(
     request_id: str,
     document_id: str,
-    reason: str,
+    payload: ReasonPayload,
     current_user: User = Depends(require_role([RoleCode.ADMIN_VALIDATION, RoleCode.SUPER_ADMIN])),
     db: AsyncSession = Depends(get_db),
 ):
+    reason = payload.reason
+
     verification = await _get_verification_or_404(db, request_id)
 
     document = await _get_document_or_404(db, document_id)
@@ -418,10 +433,12 @@ async def reject_document(
 @router.post("/{request_id}/request-correction")
 async def request_correction(
     request_id: str,
-    reason: str,
+    payload: ReasonPayload,
     current_user: User = Depends(require_role([RoleCode.ADMIN_VALIDATION, RoleCode.SUPER_ADMIN])),
     db: AsyncSession = Depends(get_db),
 ):
+    reason = payload.reason
+
     verification = await _get_verification_or_404(db, request_id)
 
     if not reason or not reason.strip():
@@ -525,10 +542,12 @@ async def approve_verification(
 @router.post("/{request_id}/reject")
 async def reject_verification(
     request_id: str,
-    reason: str,
+    payload: ReasonPayload,
     current_user: User = Depends(require_role([RoleCode.ADMIN_VALIDATION, RoleCode.SUPER_ADMIN])),
     db: AsyncSession = Depends(get_db),
 ):
+    reason = payload.reason
+
     verification = await _get_verification_or_404(db, request_id)
 
     if not reason or not reason.strip():

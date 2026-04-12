@@ -9,13 +9,21 @@ definePageMeta({
 
 const route = useRoute()
 const router = useRouter()
+const config = useRuntimeConfig()
 const { apiFetch } = useApi()
+
 
 const requestId = route.params.id as string
 
 const detail = ref<AdminVerificationRequestDetail | null>(null)
 const loading = ref(true)
 const error = ref<string | null>(null)
+
+onMounted(() => {
+  console.log('Runtime Config:', config.public)
+  console.log('API Base:', config.public.apiBase)
+})
+
 const actionLoading = ref(false)
 const actionError = ref<string | null>(null)
 const actionSuccess = ref<string | null>(null)
@@ -397,8 +405,10 @@ onMounted(() => {
 
               <div class="d-flex ga-2 mt-3">
                 <v-btn
-                  :href="doc.download_url"
+                  :href="`http://localhost:8000/api/v1${doc.download_url}`"
                   target="_blank"
+
+
                   color="primary"
                   variant="tonal"
                   size="small"
@@ -411,7 +421,8 @@ onMounted(() => {
 
             <v-divider v-if="detail.status === 'under_review'" />
 
-            <v-card-actions v-if="detail.status === 'under_review' && doc.review_status === 'pending'">
+            <v-card-actions v-if="(detail.status === 'under_review' || detail.status === 'submitted') && doc.review_status === 'pending'">
+
               <v-btn
                 color="success"
                 variant="tonal"

@@ -30,12 +30,6 @@ export type PrivacyPolicyVersion = {
   created_at: string
 }
 
-export type PrivacyPolicyVersionCreatePayload = {
-  policy_type: string
-  version_code: string
-  content_markdown: string
-}
-
 export type ClinicalAccessLog = {
   id: string
   actor_user_id: string
@@ -50,89 +44,6 @@ export type ClinicalAccessLog = {
   exceptional_access_request_id?: string | null
   justification?: string | null
   created_at: string
-}
-
-export type PrivacyAuditorAccessLogsResponse = {
-  logs: ClinicalAccessLog[]
-  count: number
-}
-
-export type ResourceAccessPolicy = {
-  resource_type: string
-  classification_code: string
-  access_mode: string
-  requires_relationship: boolean
-  requires_patient_authorization: boolean
-  requires_justification: boolean
-  max_access_minutes?: number | null
-  allow_download: boolean
-  is_active: boolean
-}
-
-export type ResourceAccessPolicyUpdatePayload = {
-  classification_code: string
-  access_mode: string
-  requires_relationship: boolean
-  requires_patient_authorization: boolean
-  requires_justification: boolean
-  max_access_minutes?: number | null
-  allow_download: boolean
-}
-
-export type RetentionPolicy = {
-  id: string
-  code: string
-  resource_type: string
-  retention_days?: number | null
-  archive_after_days?: number | null
-  delete_mode: string
-  description?: string | null
-  is_active: boolean
-}
-
-export type RetentionPolicyCreatePayload = {
-  code: string
-  resource_type: string
-  retention_days?: number | null
-  archive_after_days?: number | null
-  delete_mode: string
-  description?: string | null
-}
-
-export type PrivacyIncident = {
-  id: string
-  incident_code: string
-  detected_at: string
-  reported_by_user_id?: string | null
-  severity: string
-  incident_type: string
-  description: string
-  affected_resource_type?: string | null
-  affected_resource_id?: string | null
-  status: string
-  assigned_admin_id?: string | null
-  resolution_summary?: string | null
-  resolved_at?: string | null
-}
-
-export type PrivacyIncidentCreatePayload = {
-  incident_type: string
-  severity: string
-  description: string
-  affected_resource_type?: string | null
-  affected_resource_id?: string | null
-}
-
-export type PrivacyIncidentAssignPayload = {
-  admin_id: string
-}
-
-export type PrivacyIncidentResolvePayload = {
-  summary: string
-}
-
-export type PrivacyIncidentDismissPayload = {
-  summary: string
 }
 
 export type ExceptionalAccessRequestCreatePayload = {
@@ -172,4 +83,9 @@ export type ExceptionalAccessRequestResponse = {
   revoked_at?: string | null
   revoke_reason?: string | null
   created_at: string
+}
+
+export type PrivacyAuditorAccessLogsResponse = {
+  logs: ClinicalAccessLog[]
+  count: number
 }

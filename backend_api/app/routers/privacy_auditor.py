@@ -8,7 +8,8 @@ from app.core.dependencies import get_current_user
 from app.models.user import User
 from app.services.step7_services import ClinicalAccessLoggingService
 
-router = APIRouter(prefix="/privacy-auditor", tags=["privacy-auditor"])
+router = APIRouter(prefix="", tags=["privacy-auditor"])
+
 
 
 async def _require_privacy_auditor(current_user: User = Depends(get_current_user)) -> User:

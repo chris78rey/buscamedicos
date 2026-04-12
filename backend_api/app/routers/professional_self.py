@@ -384,7 +384,8 @@ def _serialize_time_block(item: ProfessionalTimeBlock) -> Dict[str, Any]:
 
 
 def _download_url(file_id: str) -> str:
-    return f"/api/v1/files/{file_id}/download"
+    return f"/files/{file_id}/download"
+
 
 
 def _serialize_professional_self(professional: Professional) -> Dict[str, Any]:
