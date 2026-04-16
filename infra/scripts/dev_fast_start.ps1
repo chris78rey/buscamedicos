@@ -16,9 +16,9 @@ $FrontendDir = Join-Path $ProjectRoot "web_frontend"
 $EnvFile = Join-Path $InfraDir ".env"
 
 Write-Host "=== Fase 2: Desarrollo Rápido Local ===" -ForegroundColor Cyan
-Write-Host "Backend: http://localhost:8000" -ForegroundColor Gray
-Write-Host "Frontend: http://localhost:3000" -ForegroundColor Gray
-Write-Host "Docs API: http://localhost:8000/docs" -ForegroundColor Gray
+Write-Host "Backend: http://localhost:8001" -ForegroundColor Gray
+Write-Host "Frontend: http://localhost:3002" -ForegroundColor Gray
+Write-Host "Docs API: http://localhost:8001/docs" -ForegroundColor Gray
 Write-Host ""
 
 # 1. Cargar credenciales desde .env
@@ -100,7 +100,7 @@ $BackendEnv = @{
 
 # Construir el comando con env vars
 $envCmd = $BackendEnv.GetEnumerator() | ForEach-Object { "$($_.Key)=$($_.Value)" }
-$backendCmd = ".\venv\Scripts\python -m uvicorn app.main:app --reload --host 127.0.0.1 --port 8000"
+$backendCmd = ".\venv\Scripts\python -m uvicorn app.main:app --reload --host 127.0.0.1 --port 8001"
 
 Write-Host "  Comando: $backendCmd" -ForegroundColor Gray
 Write-Host "  Abriendo nueva ventana..." -ForegroundColor Gray
@@ -115,10 +115,10 @@ Set-Location '$BackendDir'
 `$env:SECRET_KEY = '$($env:SECRET_KEY)'
 `$env:FILES_PATH = '$FilesDir'
 `$env:MAX_FILE_SIZE_MB = '10'
-.\venv\Scripts\python -m uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
+.\venv\Scripts\python -m uvicorn app.main:app --reload --host 127.0.0.1 --port 8001
 "@ | Out-File -FilePath $backendScript -Encoding UTF8
 
-Start-Process powershell -ArgumentList "-NoExit", "-Command", "Set-Location '$BackendDir'; `$env:PYTHONPATH = '$BackendDir'; `$env:DATABASE_URL = 'postgresql+asyncpg://${env:POSTGRES_USER}:${env:POSTGRES_PASSWORD}@localhost:5432/${env:POSTGRES_DB}'; `$env:SECRET_KEY = '$($env:SECRET_KEY)'; `$env:FILES_PATH = '$FilesDir'; .\venv\Scripts\python -m uvicorn app.main:app --reload --host 127.0.0.1 --port 8000"
+Start-Process powershell -ArgumentList "-NoExit", "-Command", "Set-Location '$BackendDir'; `$env:PYTHONPATH = '$BackendDir'; `$env:DATABASE_URL = 'postgresql+asyncpg://${env:POSTGRES_USER}:${env:POSTGRES_PASSWORD}@localhost:5432/${env:POSTGRES_DB}'; `$env:SECRET_KEY = '$($env:SECRET_KEY)'; `$env:FILES_PATH = '$FilesDir'; .\venv\Scripts\python -m uvicorn app.main:app --reload --host 127.0.0.1 --port 8001"
 
 # 6. Iniciar frontend con hot-reload
 Write-Host "[6/6] Iniciando frontend Nuxt..." -ForegroundColor Yellow
@@ -131,11 +131,11 @@ Write-Host ""
 Write-Host "=== Desarrollo rápido iniciado ===" -ForegroundColor Green
 Write-Host ""
 Write-Host "Espera ~10 segundos y verifica:" -ForegroundColor Cyan
-Write-Host "  curl http://127.0.0.1:8000/health/live" -ForegroundColor Gray
+Write-Host "  curl http://127.0.0.1:8001/health/live" -ForegroundColor Gray
 Write-Host ""
 Write-Host "Abre en navegador:" -ForegroundColor Cyan
-Write-Host "  Backend API: http://localhost:8000/docs" -ForegroundColor Gray
-Write-Host "  Frontend:    http://localhost:3000" -ForegroundColor Gray
+Write-Host "  Backend API: http://localhost:8001/docs" -ForegroundColor Gray
+Write-Host "  Frontend:    http://localhost:3002" -ForegroundColor Gray
 Write-Host ""
 Write-Host "Para detener: cierra las ventanas de PowerShell abiertas" -ForegroundColor Yellow
 Write-Host "Para revertir: docker compose -f .\docker-compose.dev-db-only.yml down" -ForegroundColor Gray
