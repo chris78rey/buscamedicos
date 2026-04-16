@@ -1,0 +1,29 @@
+version: "3.9"
+
+# Solo PostgreSQL - para desarrollo local con backend y frontend en host
+# Usar este compose en lugar del full docker-compose.yml para desarrollo rápido
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: buscamedicos_postgres
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-buscamedicos}
+      POSTGRES_USER: ${POSTGRES_USER:-buscamedicos}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme123}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-buscamedicos} -d ${POSTGRES_DB:-buscamedicos}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  postgres_data:
