@@ -19,6 +19,15 @@ import type {
   SlotItem,
 } from '~/types/professional'
 
+export type ProfessionalPriceItem = {
+  id: string
+  modality_code: string
+  amount: number
+  currency_code: string
+  is_active: boolean
+}
+
+
 type ApiFetchOptions = {
   method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
   headers?: HeadersInit
@@ -61,7 +70,8 @@ function cleanQuery(params: Record<string, unknown>) {
 
 export function useApi() {
   const config = useRuntimeConfig()
-  const token = useCookie<string | null>('access_token')
+  const token = useCookie<string | null>('access_token', { path: '/' })
+
 
   async function apiFetch<T>(path: string, options: ApiFetchOptions = {}): Promise<T> {
     const isFormData = options.body instanceof FormData
@@ -230,6 +240,26 @@ export function useApi() {
     })
   }
 
+  async function getMyPrices(): Promise<ProfessionalPriceItem[]> {
+    return await apiFetch<ProfessionalPriceItem[]>('/professionals/me/prices', {
+      method: 'GET',
+    })
+  }
+
+  async function updateMyPrice(
+    modality_code: string,
+    amount: number,
+  ): Promise<ProfessionalPriceItem> {
+    return await apiFetch<ProfessionalPriceItem>('/professionals/me/prices', {
+      method: 'PUT',
+      body: {
+        modality_code,
+        amount,
+      },
+    })
+  }
+
+
   // --- PRIVACY AUDITOR ---
 
   async function getPrivacyAuditorAccessLogs(
@@ -280,5 +310,8 @@ export function useApi() {
     getProfessionalExceptionalAccessRequests,
     getProfessionalAccessLogs,
     getPrivacyAuditorAccessLogs,
+    getMyPrices,
+    updateMyPrice,
   }
 }
+

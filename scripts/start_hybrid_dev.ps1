@@ -1,32 +1,53 @@
-# Script de Arranque Híbrido - BuscaMedicos
-# DB en Docker + Backend/Frontend Local
+param (
+    [switch]$ForceInstall = $false
+)
 
+# Script de Arranque Híbrido Optimizado - BuscaMedicos
 Write-Host "--- Levantando Base de Datos en Docker ---" -ForegroundColor Cyan
 cd infra
 docker-compose up -d postgres
 cd ..
 
 # Configuración del Backend
-$backendDir = "g:\codex_projects\buscamedicos\backend_api"
-$envVarsBackend = @{
-    "DATABASE_URL" = "postgresql+asyncpg://buscamedicos:buscamedicos123@localhost:5432/buscamedicos"
-    "SECRET_KEY" = "dev-secret-key-buscamedicos"
-}
+$backendDir = "$PSScriptRoot\..\backend_api"
+Write-Host "--- Lanzando Backend (FastAPI) ---" -ForegroundColor Green
 
-# Configuración del Frontend
-$frontendDir = "g:\codex_projects\buscamedicos\web_frontend"
-$envVarsFrontend = @{
-    "NUXT_PUBLIC_API_BASE" = "http://localhost:8000/api/v1"
+$backendCommand = @"
+cd '$backendDir'
+if ('$ForceInstall' -eq 'True' -or !(Test-Path .venv)) {
+    Write-Host 'Preparando entorno virtual y dependencias...' -ForegroundColor Cyan
+    if (!(Test-Path .venv)) { python -m venv .venv }
+    .\.venv\Scripts\activate
+    pip install -r requirements.txt
+} else {
+    .\.venv\Scripts\activate
 }
+`$env:DATABASE_URL='postgresql+asyncpg://buscamedicos:buscamedicos123@localhost:5432/buscamedicos'
+`$env:SECRET_KEY='dev-secret-key-buscamedicos'
+Write-Host 'Iniciando Uvicorn con Auto-Reload...' -ForegroundColor Green
+uvicorn app.main:app --reload --port 8000
+"@
 
-Write-Host "--- Lanzando Backend en ventana independiente ---" -ForegroundColor Green
-$backendCommand = "cd '$backendDir'; if (!(Test-Path .venv)) { Write-Host 'Creando entorno virtual...'; python -m venv .venv }; .\.venv\Scripts\activate; pip install -r requirements.txt; `$env:DATABASE_URL='postgresql+asyncpg://buscamedicos:buscamedicos123@localhost:5432/buscamedicos'; `$env:SECRET_KEY='dev-secret-key-buscamedicos'; uvicorn app.main:app --reload --port 8000"
 Start-Process powershell -ArgumentList "-NoExit", "-Command", $backendCommand
 
-Write-Host "--- Lanzando Frontend en ventana independiente ---" -ForegroundColor Yellow
-$frontendCommand = "cd '$frontendDir'; if (!(Test-Path node_modules)) { Write-Host 'Instalando node_modules...'; npm install }; `$env:NUXT_PUBLIC_API_BASE='http://localhost:8000/api/v1'; npm run dev"
+# Configuración del Frontend
+$frontendDir = "$PSScriptRoot\..\web_frontend"
+Write-Host "--- Lanzando Frontend (Nuxt/Vite) ---" -ForegroundColor Yellow
+
+$frontendCommand = @"
+cd '$frontendDir'
+if ('$ForceInstall' -eq 'True' -or !(Test-Path node_modules)) {
+    Write-Host 'Instalando dependencias de Node (esto puede tardar)...' -ForegroundColor Cyan
+    npm install
+}
+`$env:NUXT_PUBLIC_API_BASE='http://localhost:8000/api/v1'
+Write-Host 'Iniciando Nuxt con HMR (Hot Module Replacement)...' -ForegroundColor Yellow
+npm run dev
+"@
+
 Start-Process powershell -ArgumentList "-NoExit", "-Command", $frontendCommand
 
-Write-Host "--- Todo el sistema está arrancando ---" -ForegroundColor Cyan
+Write-Host "--- Sistema Híbrido Listo ---" -ForegroundColor Cyan
 Write-Host "Backend: http://localhost:8000"
 Write-Host "Frontend: http://localhost:3000"
+Write-Host "Usa el flag -ForceInstall si añades nuevas librerías al proyecto."

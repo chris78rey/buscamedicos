@@ -1,15 +1,20 @@
+from datetime import datetime
+from typing import List, Optional
+import uuid
+
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
 from pydantic import BaseModel, EmailStr
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.core.database import get_db
+from app.core.dependencies import get_current_user
 from app.core.security import hash_password, verify_password, create_access_token, create_refresh_token
 from app.models.user import User, UserStatus
-from app.models.role import Role, RoleCode, UserRole
+from app.models.role import Role, RoleCode, UserRole, UserRoleStatus
 from app.models.person import Person
 from app.models.patient import Patient
 from app.models.professional import Professional, OnboardingStatus, ProfessionalStatus
-from typing import Optional
 
 router = APIRouter()
 
@@ -41,6 +46,18 @@ class TokenResponse(BaseModel):
 
 class RefreshRequest(BaseModel):
     refresh_token: str
+
+class AuthMeResponse(BaseModel):
+    id: str
+    email: str
+    is_email_verified: bool
+    status: str
+    role_codes: List[str]
+    primary_role: Optional[str] = None
+    actor_type: str
+
+    class Config:
+        from_attributes = True
 
 async def assign_role(db: AsyncSession, user_id: str, role_code: str):
     result = await db.execute(select(Role).where(Role.code == role_code))
@@ -147,4 +164,52 @@ async def refresh(data: RefreshRequest, db: AsyncSession = Depends(get_db)):
     return TokenResponse(
         access_token=create_access_token({"sub": payload["sub"]}),
         refresh_token=create_refresh_token({"sub": payload["sub"]})
+    )
+
+@router.get("/me", response_model=AuthMeResponse)
+async def auth_me(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    result = await db.execute(
+        select(Role.code)
+        .join(UserRole, UserRole.role_id == Role.id)
+        .where(
+            UserRole.user_id == current_user.id,
+            UserRole.status == UserRoleStatus.ACTIVE,
+        )
+    )
+    role_codes = sorted([str(row[0]) for row in result.all()])
+
+    primary_role = None
+    for candidate in [
+        "super_admin",
+        "patient",
+        "professional",
+        "admin_validation",
+        "admin_support",
+        "admin_moderation",
+        "admin_privacy",
+        "privacy_auditor",
+    ]:
+        if candidate in role_codes:
+            primary_role = candidate
+            break
+
+    actor_type = "unknown"
+    if any(code in role_codes for code in ["super_admin", "admin_validation", "admin_support", "admin_moderation", "admin_privacy"]):
+        actor_type = "admin"
+    elif "professional" in role_codes:
+        actor_type = "professional"
+    elif "patient" in role_codes:
+        actor_type = "patient"
+
+    return AuthMeResponse(
+        id=str(current_user.id),
+        email=current_user.email,
+        is_email_verified=bool(current_user.is_email_verified),
+        status=str(current_user.status),
+        role_codes=role_codes,
+        primary_role=primary_role,
+        actor_type=actor_type,
     )

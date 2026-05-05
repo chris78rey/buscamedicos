@@ -48,12 +48,16 @@ export const useAuthStore = defineStore('auth', {
 
       try {
         this.user = await apiFetch<CurrentUser>('/auth/me', { method: 'GET' })
+        console.log('Usuario cargado desde /auth/me:', this.user)
       }
       catch (error: unknown) {
         if (error instanceof FetchError && error.statusCode === 404) {
+          console.warn('/auth/me dio 404, intentando fallback a /users/me')
           this.user = await apiFetch<CurrentUser>('/users/me', { method: 'GET' })
+          console.log('Usuario cargado desde /users/me:', this.user)
         }
         else {
+          console.error('Error al cargar /me:', error)
           this.loaded = true
           throw error
         }
@@ -75,7 +79,8 @@ export const useAuthStore = defineStore('auth', {
       try {
         return await this.fetchMe()
       }
-      catch {
+      catch (error) {
+        console.error('Error real en bootstrap auth:', error)
         this.user = null
         this.token = null
         this.loaded = true

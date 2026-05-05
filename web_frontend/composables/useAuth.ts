@@ -42,14 +42,19 @@ export function useAuth() {
   }
 
   function syncAccessToken(token: string | null) {
-    const cookie = useCookie<string | null>('access_token')
+    const cookie = useCookie<string | null>('access_token', {
+      path: '/',
+      sameSite: 'lax',
+      maxAge: 60 * 60 * 24 * 7, // 1 semana
+    })
     cookie.value = token
   }
 
   async function bootstrapAuth() {
     const authStore = useAuthStore()
-    const cookie = useCookie<string | null>('access_token')
+    const cookie = useCookie<string | null>('access_token', { path: '/' })
     const cookieToken = cookie.value ?? null
+
 
     if (!authStore.loaded) {
       await authStore.bootstrap(cookieToken)

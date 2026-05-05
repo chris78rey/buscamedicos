@@ -269,19 +269,20 @@ async def _validate_availability_payload(
         if exclude_id and str(row.id) == str(exclude_id):
             continue
 
-        row_start = _parse_hms(row.start_time)
-        row_end = _parse_hms(row.end_time)
+        row_start = row.start_time
+        row_end = row.end_time
 
         if _ranges_overlap(start_parsed, end_parsed, row_start, row_end):
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
-                detail=f"Cruce de horario detectado con otra disponibilidad ({row.start_time} - {row.end_time}, modalidad: {row.modality_code})",
+                detail=f"Cruce de horario detectado con otra disponibilidad ({row.start_time.strftime('%H:%M:%S')} - {row.end_time.strftime('%H:%M:%S')}, modalidad: {row.modality_code})",
             )
 
     return {
-        "start_time": start_time_normalized,
-        "end_time": end_time_normalized,
+        "start_time": start_parsed,
+        "end_time": end_parsed,
     }
+
 
 
 async def _validate_time_block_payload(
@@ -360,14 +361,15 @@ def _serialize_availability(item: ProfessionalAvailability) -> Dict[str, Any]:
         "id": str(item.id),
         "professional_id": str(item.professional_id),
         "weekday": item.weekday,
-        "start_time": item.start_time,
-        "end_time": item.end_time,
+        "start_time": item.start_time.strftime("%H:%M:%S") if item.start_time else None,
+        "end_time": item.end_time.strftime("%H:%M:%S") if item.end_time else None,
         "slot_minutes": item.slot_minutes,
         "modality_code": item.modality_code,
         "status": item.status,
         "created_at": item.created_at.isoformat() if item.created_at else None,
         "updated_at": item.updated_at.isoformat() if item.updated_at else None,
     }
+
 
 
 def _serialize_time_block(item: ProfessionalTimeBlock) -> Dict[str, Any]:
@@ -1089,6 +1091,7 @@ async def update_availability(
     item.modality_code = data.modality_code
     item.status = "active"
     item.updated_at = datetime.utcnow()
+
 
     await _log_professional_audit(
         db=db,

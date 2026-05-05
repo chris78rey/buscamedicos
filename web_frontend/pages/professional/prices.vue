@@ -24,7 +24,7 @@ const errorMessage = ref('')
 const successMessage = ref('')
 
 const modalityOptions = [
-  { title: 'Consulta presencial', value: 'in_person_consultorio' },
+  { title: 'Consulta presencial', value: 'in_person' },
   { title: 'Teleconsulta', value: 'teleconsulta' },
 ]
 
@@ -32,9 +32,10 @@ const editingModality = ref('')
 const editingAmount = ref<number | null>(null)
 
 const defaultPrices: Record<string, number> = {
-  in_person_consultorio: 50,
+  in_person: 50,
   teleconsulta: 40,
 }
+
 
 function formatCurrency(value?: number | null, currency = 'USD') {
   if (value === null || value === undefined) return 'N/A'
@@ -68,13 +69,17 @@ async function loadPrices() {
   }
   catch (error: unknown) {
     if (error instanceof FetchError) {
-      errorMessage.value = error.data?.detail?.toString() || 'No se pudieron cargar los precios.'
+      const serverDetail = error.data?.detail
+      errorMessage.value = Array.isArray(serverDetail) 
+        ? serverDetail.map((d: any) => d.msg).join(', ') 
+        : (serverDetail || 'No se pudieron cargar los precios.')
     }
     else {
-      errorMessage.value = 'Error al cargar precios.'
+      errorMessage.value = `Error de ejecución: ${error instanceof Error ? error.message : String(error)}`
     }
     prices.value = []
   }
+
   finally {
     loading.value = false
   }
@@ -103,13 +108,20 @@ async function handleSave(modality: string) {
     successMessage.value = 'Precio actualizado correctamente.'
   }
   catch (error: unknown) {
+    console.error('Error completo detectado:', error)
     if (error instanceof FetchError) {
-      errorMessage.value = error.data?.detail?.toString() || 'No se pudo actualizar el precio.'
+      console.log('Datos del error del servidor:', error.data)
+      const serverDetail = error.data?.detail
+      errorMessage.value = Array.isArray(serverDetail) 
+        ? serverDetail.map((d: any) => d.msg).join(', ') 
+        : (serverDetail || 'No se pudo actualizar el precio.')
     }
     else {
-      errorMessage.value = 'Error al actualizar el precio.'
+      errorMessage.value = `Error de ejecución: ${error instanceof Error ? error.message : String(error)}`
     }
   }
+
+
   finally {
     saving.value = null
   }
@@ -178,9 +190,10 @@ onMounted(() => {
           >
             <template #prepend>
               <v-icon
-                :icon="modality.value === 'in_person_consultorio' ? 'mdi-account-group-outline' : 'mdi-video-outline'"
+                :icon="modality.value === 'in_person' ? 'mdi-account-group-outline' : 'mdi-video-outline'"
               />
             </template>
+
 
             <v-list-item-title>{{ modality.title }}</v-list-item-title>
 

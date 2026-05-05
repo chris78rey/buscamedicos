@@ -10,7 +10,10 @@ class UserStatus(str, enum.Enum):
     SUSPENDED = "suspended"
     SOFT_DELETED = "soft_deleted"
 
+from sqlalchemy.orm import relationship
+
 class User(Base):
+
     __tablename__ = "users"
 
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
@@ -26,3 +29,6 @@ class User(Base):
     updated_by = Column(String, nullable=True)
     deleted_by = Column(String, nullable=True)
     version = Column(String, default="1")
+
+    # Relaciones
+    roles = relationship("Role", secondary="user_roles", back_populates="users", viewonly=True)

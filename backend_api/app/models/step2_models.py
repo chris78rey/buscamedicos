@@ -1,6 +1,7 @@
 import uuid
 from datetime import datetime
-from sqlalchemy import Column, String, Text, Boolean, DateTime, Integer
+from sqlalchemy import Column, String, Text, Boolean, DateTime, Integer, Time
+
 from app.core.database import Base
 
 class Specialty(Base):
@@ -78,8 +79,9 @@ class ProfessionalAvailability(Base):
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
     professional_id = Column(String, nullable=False, index=True)
     weekday = Column(Integer, nullable=False)
-    start_time = Column(String, nullable=False)
-    end_time = Column(String, nullable=False)
+    start_time = Column(Time, nullable=False)
+    end_time = Column(Time, nullable=False)
+
     slot_minutes = Column(Integer, nullable=False)
     modality_code = Column(String, nullable=False)
     status = Column(String, default="active")
